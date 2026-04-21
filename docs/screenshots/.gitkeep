@@ -1,0 +1,9 @@
+Legt hier die Screenshots für die README ab:
+
+- ticker.png              — Ticker-Panel unter der Menüleiste, mit mehreren Headlines
+- menu.png                — Menüleisten-Menü (Ticker anzeigen / Einstellungen / Beenden)
+- settings-general.png    — Tab "Allgemein" im Einstellungsfenster
+- settings-sources.png    — Tab "Quellen" mit mindestens einer angelegten Quelle
+- source-form.png         — Formular zum Anlegen/Bearbeiten einer Quelle
+
+Tipp: mit Cmd+Shift+4, dann Space-Taste → gezielter Fenster-Screenshot.
