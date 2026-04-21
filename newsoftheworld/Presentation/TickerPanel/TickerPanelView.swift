@@ -18,25 +18,25 @@ struct TickerPanelView: View {
         case .idle:
             TickerMessageView(
                 systemImage: "antenna.radiowaves.left.and.right.slash",
-                text: "Keine Quellen konfiguriert",
+                text: Text("ticker.state.noSources"),
                 fontSize: CGFloat(viewModel.fontSize)
             )
         case .loading:
             TickerMessageView(
                 systemImage: "arrow.triangle.2.circlepath",
-                text: "Lade Nachrichten …",
+                text: Text("ticker.state.loading"),
                 fontSize: CGFloat(viewModel.fontSize)
             )
         case .empty:
             TickerMessageView(
                 systemImage: "tray",
-                text: "Keine Nachrichten",
+                text: Text("ticker.state.empty"),
                 fontSize: CGFloat(viewModel.fontSize)
             )
         case .error(let message):
             TickerMessageView(
                 systemImage: "exclamationmark.triangle",
-                text: message,
+                text: Text(verbatim: message),
                 fontSize: CGFloat(viewModel.fontSize),
                 tint: .red
             )
@@ -53,14 +53,14 @@ struct TickerPanelView: View {
 
 private struct TickerMessageView: View {
     let systemImage: String
-    let text: String
+    let text: Text
     let fontSize: CGFloat
     var tint: Color = .secondary
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
-            Text(text)
+            text
                 .font(.system(size: fontSize, weight: .medium))
                 .lineLimit(1)
         }

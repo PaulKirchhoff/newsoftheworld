@@ -35,7 +35,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         statusMenu.delegate = self
 
         let tickerItem = NSMenuItem(
-            title: "Ticker anzeigen",
+            title: String(localized: "menu.showTicker"),
             action: #selector(didSelectTicker),
             keyEquivalent: ""
         )
@@ -45,7 +45,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         let settingsItem = NSMenuItem(
-            title: "Einstellungen…",
+            title: String(localized: "menu.settings"),
             action: #selector(didSelectSettings),
             keyEquivalent: ","
         )
@@ -55,7 +55,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         statusMenu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(
-            title: "Beenden",
+            title: String(localized: "menu.quit"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )
@@ -66,7 +66,8 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         if let tickerItem = menu.items.first {
-            tickerItem.title = isTickerVisible() ? "Ticker verbergen" : "Ticker anzeigen"
+            let key: String.LocalizationValue = isTickerVisible() ? "menu.hideTicker" : "menu.showTicker"
+            tickerItem.title = String(localized: key)
         }
     }
 

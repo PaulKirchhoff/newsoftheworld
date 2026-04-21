@@ -6,13 +6,15 @@ struct AppSettings: Codable, Equatable, Sendable {
     var tickerSpeed: Double
     var tickerFontSize: Double
     var tickerPanelWidth: Double
+    var language: AppLanguage
 
     nonisolated static let `default` = AppSettings(
         appearance: .system,
         autoShowTickerOnLaunch: false,
         tickerSpeed: 60,
         tickerFontSize: 13,
-        tickerPanelWidth: 520
+        tickerPanelWidth: 520,
+        language: .system
     )
 
     nonisolated init(
@@ -20,13 +22,15 @@ struct AppSettings: Codable, Equatable, Sendable {
         autoShowTickerOnLaunch: Bool,
         tickerSpeed: Double,
         tickerFontSize: Double,
-        tickerPanelWidth: Double
+        tickerPanelWidth: Double,
+        language: AppLanguage
     ) {
         self.appearance = appearance
         self.autoShowTickerOnLaunch = autoShowTickerOnLaunch
         self.tickerSpeed = tickerSpeed
         self.tickerFontSize = tickerFontSize
         self.tickerPanelWidth = tickerPanelWidth
+        self.language = language
     }
 
     nonisolated init(from decoder: Decoder) throws {
@@ -37,5 +41,6 @@ struct AppSettings: Codable, Equatable, Sendable {
         self.tickerSpeed = try container.decodeIfPresent(Double.self, forKey: .tickerSpeed) ?? d.tickerSpeed
         self.tickerFontSize = try container.decodeIfPresent(Double.self, forKey: .tickerFontSize) ?? d.tickerFontSize
         self.tickerPanelWidth = try container.decodeIfPresent(Double.self, forKey: .tickerPanelWidth) ?? d.tickerPanelWidth
+        self.language = try container.decodeIfPresent(AppLanguage.self, forKey: .language) ?? d.language
     }
 }

@@ -22,9 +22,9 @@ final class SettingsWindowController {
         hosting.sizingOptions = [.preferredContentSize]
 
         let window = NSWindow(contentViewController: hosting)
-        window.title = "Einstellungen"
+        window.title = String(localized: "settings.window.title")
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 540, height: 420))
+        window.setContentSize(NSSize(width: 560, height: 520))
         window.center()
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace]

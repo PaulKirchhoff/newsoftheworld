@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import os
@@ -9,6 +10,7 @@ final class SettingsViewModel {
     var sources: [NewsSource]
     var lastError: String?
     var launchAtLoginState: LaunchAtLoginState
+    var languageRestartPromptVisible: Bool = false
 
     let statusStore: SourceStatusStore
 
@@ -65,6 +67,26 @@ final class SettingsViewModel {
         } catch {
             lastError = "Start beim Anmelden konnte nicht gesetzt werden: \(error.localizedDescription)"
             launchAtLoginState = launchAtLoginService.state
+        }
+    }
+
+    func setLanguage(_ language: AppLanguage) {
+        guard language != appSettings.language else { return }
+        appSettings.language = language
+        persistSettings()
+        LanguagePreference.apply(language: language)
+        languageRestartPromptVisible = true
+    }
+
+    func relaunchForLanguageChange() {
+        languageRestartPromptVisible = false
+        let url = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in
+            Task { @MainActor in
+                NSApp.terminate(nil)
+            }
         }
     }
 

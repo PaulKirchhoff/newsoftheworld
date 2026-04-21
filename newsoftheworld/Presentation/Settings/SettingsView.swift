@@ -6,13 +6,13 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             GeneralSettingsView(viewModel: viewModel)
-                .tabItem { Label("Allgemein", systemImage: "gearshape") }
+                .tabItem { Label("tab.general", systemImage: "gearshape") }
 
             SourcesSettingsView(viewModel: viewModel)
-                .tabItem { Label("Quellen", systemImage: "antenna.radiowaves.left.and.right") }
+                .tabItem { Label("tab.sources", systemImage: "antenna.radiowaves.left.and.right") }
         }
         .padding(16)
-        .frame(minWidth: 560, minHeight: 460)
+        .frame(minWidth: 560, minHeight: 500)
     }
 }
 
@@ -21,22 +21,22 @@ private struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Erscheinungsbild") {
-                Picker("Modus", selection: appearanceBinding) {
+            Section("section.appearance") {
+                Picker("appearance.mode", selection: appearanceBinding) {
                     ForEach(AppearanceMode.allCases, id: \.self) { mode in
-                        Text(mode.localizedName).tag(mode)
+                        Text(appearanceLabel(for: mode)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
 
-            Section("Ticker") {
+            Section("section.ticker") {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Geschwindigkeit")
+                        Text("ticker.speed")
                         Spacer()
-                        Text("\(Int(viewModel.appSettings.tickerSpeed)) pt/s")
+                        Text(verbatim: "\(Int(viewModel.appSettings.tickerSpeed)) pt/s")
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
@@ -45,19 +45,19 @@ private struct GeneralSettingsView: View {
                         in: 20...200,
                         step: 10
                     ) {
-                        Text("Geschwindigkeit")
+                        Text("ticker.speed")
                     } minimumValueLabel: {
-                        Text("Langsam").font(.caption).foregroundStyle(.secondary)
+                        Text("ticker.slow").font(.caption).foregroundStyle(.secondary)
                     } maximumValueLabel: {
-                        Text("Schnell").font(.caption).foregroundStyle(.secondary)
+                        Text("ticker.fast").font(.caption).foregroundStyle(.secondary)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Schriftgröße")
+                        Text("ticker.fontSize")
                         Spacer()
-                        Text("\(Int(viewModel.appSettings.tickerFontSize)) pt")
+                        Text(verbatim: "\(Int(viewModel.appSettings.tickerFontSize)) pt")
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
@@ -66,19 +66,19 @@ private struct GeneralSettingsView: View {
                         in: 11...22,
                         step: 1
                     ) {
-                        Text("Schriftgröße")
+                        Text("ticker.fontSize")
                     } minimumValueLabel: {
-                        Text("A").font(.caption).foregroundStyle(.secondary)
+                        Text(verbatim: "A").font(.caption).foregroundStyle(.secondary)
                     } maximumValueLabel: {
-                        Text("A").font(.title3).foregroundStyle(.secondary)
+                        Text(verbatim: "A").font(.title3).foregroundStyle(.secondary)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Breite")
+                        Text("ticker.width")
                         Spacer()
-                        Text("\(Int(viewModel.appSettings.tickerPanelWidth)) pt")
+                        Text(verbatim: "\(Int(viewModel.appSettings.tickerPanelWidth)) pt")
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
@@ -87,30 +87,64 @@ private struct GeneralSettingsView: View {
                         in: 320...1200,
                         step: 20
                     ) {
-                        Text("Breite")
+                        Text("ticker.width")
                     } minimumValueLabel: {
-                        Text("Schmal").font(.caption).foregroundStyle(.secondary)
+                        Text("ticker.narrow").font(.caption).foregroundStyle(.secondary)
                     } maximumValueLabel: {
-                        Text("Breit").font(.caption).foregroundStyle(.secondary)
+                        Text("ticker.wide").font(.caption).foregroundStyle(.secondary)
                     }
                 }
             }
 
-            Section("Start") {
-                Toggle("Ticker beim Start automatisch anzeigen", isOn: autoShowBinding)
-                Toggle(
-                    "Beim Anmelden starten",
-                    isOn: launchAtLoginBinding
-                )
-                .disabled(viewModel.launchAtLoginState == .notAvailable)
+            Section("section.start") {
+                Toggle("start.autoShowTicker", isOn: autoShowBinding)
+                Toggle("start.launchAtLogin", isOn: launchAtLoginBinding)
+                    .disabled(viewModel.launchAtLoginState == .notAvailable)
                 if viewModel.launchAtLoginState == .requiresApproval {
-                    Text("Aktivierung muss in den Systemeinstellungen → Allgemein → Anmeldeobjekte bestätigt werden.")
+                    Text("start.launchAtLogin.requiresApproval")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section("section.language") {
+                Picker(selection: languageBinding) {
+                    ForEach(AppLanguage.allCases, id: \.self) { language in
+                        Text(languageLabel(for: language)).tag(language)
+                    }
+                } label: {
+                    Text("section.language")
+                }
+                .labelsHidden()
+            }
         }
         .formStyle(.grouped)
+        .alert(
+            "language.restart.title",
+            isPresented: $viewModel.languageRestartPromptVisible
+        ) {
+            Button("language.restart.relaunch") { viewModel.relaunchForLanguageChange() }
+            Button("language.restart.later", role: .cancel) {
+                viewModel.languageRestartPromptVisible = false
+            }
+        } message: {
+            Text("language.restart.message")
+        }
+    }
+
+    private func appearanceLabel(for mode: AppearanceMode) -> LocalizedStringKey {
+        switch mode {
+        case .system: "appearance.system"
+        case .light:  "appearance.light"
+        case .dark:   "appearance.dark"
+        }
+    }
+
+    private func languageLabel(for language: AppLanguage) -> String {
+        switch language {
+        case .system: String(localized: "language.system")
+        case .german, .english, .french, .spanish: language.displayName
+        }
     }
 
     private var appearanceBinding: Binding<AppearanceMode> {
@@ -167,6 +201,13 @@ private struct GeneralSettingsView: View {
         Binding(
             get: { viewModel.launchAtLoginState == .enabled },
             set: { viewModel.setLaunchAtLogin($0) }
+        )
+    }
+
+    private var languageBinding: Binding<AppLanguage> {
+        Binding(
+            get: { viewModel.appSettings.language },
+            set: { viewModel.setLanguage($0) }
         )
     }
 }
@@ -229,14 +270,14 @@ private struct SourcesSettingsView: View {
             )
         }
         .alert(
-            "Fehler",
+            "alert.error.title",
             isPresented: Binding(
                 get: { viewModel.lastError != nil },
                 set: { if !$0 { viewModel.lastError = nil } }
             ),
             presenting: viewModel.lastError
         ) { _ in
-            Button("OK", role: .cancel) { viewModel.lastError = nil }
+            Button("common.ok", role: .cancel) { viewModel.lastError = nil }
         } message: { message in
             Text(message)
         }
@@ -247,9 +288,9 @@ private struct SourcesSettingsView: View {
             Image(systemName: "antenna.radiowaves.left.and.right.slash")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
-            Text("Noch keine Quellen")
+            Text("sources.empty.title")
                 .font(.headline)
-            Text("Füge RSS-, Atom- oder JSON-API-Quellen hinzu, um Nachrichten im Ticker anzuzeigen.")
+            Text("sources.empty.message")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -269,13 +310,13 @@ private struct SourcesSettingsView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { editing = .edit(source) }
                 .contextMenu {
-                    Button("Bearbeiten") { editing = .edit(source) }
-                    Button("Jetzt aktualisieren") {
+                    Button("sources.action.edit") { editing = .edit(source) }
+                    Button("sources.action.refreshNow") {
                         viewModel.refreshNow(sourceID: source.id)
                     }
                     .disabled(!source.isEnabled)
                     Divider()
-                    Button("Entfernen", role: .destructive) {
+                    Button("sources.action.remove", role: .destructive) {
                         viewModel.deleteSource(id: source.id)
                     }
                 }
@@ -289,7 +330,7 @@ private struct SourcesSettingsView: View {
             Button {
                 editing = .add
             } label: {
-                Label("Quelle hinzufügen", systemImage: "plus")
+                Label("sources.add", systemImage: "plus")
             }
             Spacer()
         }
@@ -307,9 +348,9 @@ private struct SourceRow: View {
                 .foregroundStyle(iconColor)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 2) {
-                Text(source.name)
+                Text(verbatim: source.name)
                     .font(.body)
-                Text(source.endpointURL.absoluteString)
+                Text(verbatim: source.endpointURL.absoluteString)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -337,27 +378,31 @@ private struct SourceRow: View {
     @ViewBuilder
     private var statusLine: some View {
         if !source.isEnabled {
-            Text("Deaktiviert")
+            Text("sources.status.disabled")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         } else if let status {
             if let error = status.lastErrorMessage {
-                Text("Fehler: \(error)")
+                Text("sources.status.errorPrefix \(error)")
                     .font(.caption2)
                     .foregroundStyle(.red)
                     .lineLimit(1)
                     .truncationMode(.middle)
             } else if let last = status.lastFetchAt {
-                Text("Aktualisiert \(last, style: .relative) vor · \(status.lastItemCount) Items")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text("sources.status.updatedAgo \(last, style: .relative)")
+                    Text(verbatim: "·")
+                    Text("sources.status.itemCount \(status.lastItemCount)")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             } else {
-                Text("Wird geladen …")
+                Text("sources.status.loading")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         } else {
-            Text("Noch nicht abgerufen")
+            Text("sources.status.notFetched")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -365,7 +410,7 @@ private struct SourceRow: View {
 
     private var badges: some View {
         HStack(spacing: 6) {
-            Text(source.type.localizedName)
+            Text(verbatim: source.type.localizedName)
                 .font(.caption)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -373,7 +418,7 @@ private struct SourceRow: View {
             if source.hasAPIKey {
                 Image(systemName: "key.fill")
                     .foregroundStyle(.secondary)
-                    .help("API-Key gespeichert")
+                    .help(Text("sources.storedKeyHint"))
             }
         }
     }

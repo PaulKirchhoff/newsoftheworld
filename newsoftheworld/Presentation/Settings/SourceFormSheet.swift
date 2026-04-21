@@ -54,49 +54,53 @@ struct SourceFormSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section("Quelle") {
-                    TextField("Name", text: $name)
-                    Picker("Typ", selection: $type) {
+                Section("sourceForm.section.source") {
+                    TextField("sourceForm.name", text: $name)
+                    Picker("sourceForm.type", selection: $type) {
                         ForEach(SourceType.allCases, id: \.self) { t in
-                            Text(t.localizedName).tag(t)
+                            Text(verbatim: t.localizedName).tag(t)
                         }
                     }
-                    TextField("URL", text: $urlString, prompt: Text("https://example.com/feed"))
-                        .textContentType(.URL)
-                        .autocorrectionDisabled()
-                    Toggle("Aktiv", isOn: $isEnabled)
+                    TextField(
+                        "sourceForm.url",
+                        text: $urlString,
+                        prompt: Text("sourceForm.urlPrompt")
+                    )
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    Toggle("sourceForm.enabled", isOn: $isEnabled)
                     Stepper(
-                        "Aktualisierung: alle \(refreshIntervalMinutes) Min.",
+                        "sourceForm.interval \(refreshIntervalMinutes)",
                         value: $refreshIntervalMinutes,
                         in: 1...60
                     )
                 }
 
-                Section("API-Key") {
+                Section("sourceForm.section.apiKey") {
                     if hasExistingKey && !clearStoredKey {
                         HStack {
                             Image(systemName: "key.fill")
-                            Text("API-Key ist gespeichert.")
+                            Text("sourceForm.apiKey.stored")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Button("Entfernen", role: .destructive) {
+                            Button("sourceForm.apiKey.remove", role: .destructive) {
                                 clearStoredKey = true
                                 apiKey = ""
                             }
                         }
                     }
                     SecureField(
-                        hasExistingKey && !clearStoredKey ? "Neuen API-Key eingeben (ersetzt gespeicherten)" : "API-Key (optional)",
+                        apiKeyPrompt,
                         text: $apiKey
                     )
                     if clearStoredKey {
-                        Text("Gespeicherter API-Key wird beim Speichern entfernt.")
+                        Text("sourceForm.apiKey.willClear")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                Section("Verbindung testen") {
+                Section("sourceForm.section.test") {
                     HStack(spacing: 8) {
                         Button {
                             runTest()
@@ -104,7 +108,7 @@ struct SourceFormSheet: View {
                             if case .running = testState {
                                 ProgressView().controlSize(.small)
                             } else {
-                                Text("Testen")
+                                Text("sourceForm.test.button")
                             }
                         }
                         .disabled(!isValid || testState == .running)
@@ -119,9 +123,9 @@ struct SourceFormSheet: View {
             Divider()
             HStack {
                 Spacer()
-                Button("Abbrechen", role: .cancel, action: onCancel)
+                Button("common.cancel", role: .cancel, action: onCancel)
                     .keyboardShortcut(.cancelAction)
-                Button("Speichern") { commit() }
+                Button("common.save") { commit() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!isValid)
             }
@@ -131,24 +135,36 @@ struct SourceFormSheet: View {
         .onAppear(perform: prefill)
     }
 
+    private var apiKeyPrompt: LocalizedStringKey {
+        hasExistingKey && !clearStoredKey ? "sourceForm.apiKey.replace" : "sourceForm.apiKey.optional"
+    }
+
     @ViewBuilder
     private var testResultView: some View {
         switch testState {
         case .idle:
             EmptyView()
         case .running:
-            Text("Wird geprüft …")
+            Text("sourceForm.test.running")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .success(let count):
-            Label("\(count) Items geladen", systemImage: "checkmark.circle.fill")
-                .font(.caption)
-                .foregroundStyle(.green)
+            Label {
+                Text("sourceForm.test.success \(count)")
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+            }
+            .font(.caption)
+            .foregroundStyle(.green)
         case .failure(let message):
-            Label(message, systemImage: "xmark.octagon.fill")
-                .font(.caption)
-                .foregroundStyle(.red)
-                .lineLimit(2)
+            Label {
+                Text(verbatim: message)
+            } icon: {
+                Image(systemName: "xmark.octagon.fill")
+            }
+            .font(.caption)
+            .foregroundStyle(.red)
+            .lineLimit(2)
         }
     }
 
