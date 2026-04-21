@@ -9,11 +9,14 @@
 #
 # Prerequisites (one-time):
 #   * "Developer ID Application" certificate installed in the Keychain
-#   * App-specific App Store Connect API key stored under the profile
-#     NEWS_OF_THE_WORLD_NOTARY, e.g. via:
+#     (or imported into a CI-specific keychain via the workflow).
+#   * Notarization credentials reachable either as a keychain profile
+#     named NEWS_OF_THE_WORLD_NOTARY (local dev):
 #       xcrun notarytool store-credentials "NEWS_OF_THE_WORLD_NOTARY" \
 #         --key ~/.appstoreconnect/private_keys/AuthKey_XXX.p8 \
 #         --key-id XXX --issuer YYY
+#     or via the following environment variables (CI):
+#       APPLE_API_KEY_PATH, APPLE_API_KEY_ID, APPLE_API_ISSUER_ID
 #   * create-dmg (brew install create-dmg)
 #
 # Outputs land in build/release/:
@@ -45,6 +48,15 @@ APP_NAME="newsoftheworld"
 PRODUCT_LABEL="NewsOfTheWorld"
 NOTARY_PROFILE="NEWS_OF_THE_WORLD_NOTARY"
 EXPORT_OPTS="$REPO_ROOT/ExportOptions.plist"
+
+# Pick notarization credentials from env (CI) or local keychain profile.
+if [[ -n "${APPLE_API_KEY_PATH:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER_ID:-}" ]]; then
+    NOTARY_ARGS=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID")
+    echo "==> Using API-key notarization credentials from environment"
+else
+    NOTARY_ARGS=(--keychain-profile "$NOTARY_PROFILE")
+    echo "==> Using keychain profile: $NOTARY_PROFILE"
+fi
 
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
@@ -95,9 +107,7 @@ NOTARY_ZIP="$EXPORT_DIR/$PRODUCT_LABEL-$VERSION-notarize.zip"
 ditto -c -k --keepParent "$APP_BUNDLE" "$NOTARY_ZIP"
 
 echo "==> Submitting to Apple notarization (may take a minute or two)"
-xcrun notarytool submit "$NOTARY_ZIP" \
-    --keychain-profile "$NOTARY_PROFILE" \
-    --wait
+xcrun notarytool submit "$NOTARY_ZIP" "${NOTARY_ARGS[@]}" --wait
 
 echo "==> Stapling notarization ticket"
 xcrun stapler staple "$APP_BUNDLE"
@@ -124,9 +134,7 @@ echo "==> Signing DMG"
 codesign --sign "Developer ID Application" --timestamp "$DMG_PATH"
 
 echo "==> Notarizing DMG"
-xcrun notarytool submit "$DMG_PATH" \
-    --keychain-profile "$NOTARY_PROFILE" \
-    --wait
+xcrun notarytool submit "$DMG_PATH" "${NOTARY_ARGS[@]}" --wait
 xcrun stapler staple "$DMG_PATH"
 xcrun stapler validate "$DMG_PATH"
 

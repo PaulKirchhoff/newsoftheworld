@@ -58,10 +58,19 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 ## Installation
 
-Aus den Quellen bauen:
+### Homebrew (empfohlen)
 
 ```sh
-git clone <repo-url>
+brew tap paulkirchhoff/notw
+brew install --cask newsoftheworld
+```
+
+Holt die signierte, notarisierte DMG direkt vom GitHub-Release, legt die App in `/Applications` und akzeptiert damit Gatekeeper ohne weitere Klicks.
+
+### Aus den Quellen bauen
+
+```sh
+git clone https://github.com/PaulKirchhoff/newsoftheworld.git
 cd newsoftheworld
 open newsoftheworld.xcodeproj
 ```
@@ -78,8 +87,6 @@ xcodebuild \
   -destination 'platform=macOS' \
   build
 ```
-
-Ein vorkompiliertes Release gibt es aktuell nicht.
 
 ## Verwendung
 
