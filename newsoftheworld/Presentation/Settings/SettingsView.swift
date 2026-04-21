@@ -84,7 +84,8 @@ private struct SourcesSettingsView: View {
                             type: draft.type,
                             url: draft.url,
                             apiKey: draft.apiKeyInput.isEmpty ? nil : draft.apiKeyInput,
-                            isEnabled: draft.isEnabled
+                            isEnabled: draft.isEnabled,
+                            refreshIntervalSeconds: draft.refreshIntervalSeconds
                         )
                     case .edit(let source):
                         viewModel.updateSource(
@@ -93,6 +94,7 @@ private struct SourcesSettingsView: View {
                             type: draft.type,
                             url: draft.url,
                             isEnabled: draft.isEnabled,
+                            refreshIntervalSeconds: draft.refreshIntervalSeconds,
                             apiKeyUpdate: draft.apiKeyUpdate
                         )
                     }

@@ -11,7 +11,7 @@ struct NewsItem: Identifiable, Hashable, Sendable {
     let category: String?
     let author: String?
 
-    init(
+    nonisolated init(
         id: String,
         sourceId: UUID? = nil,
         sourceName: String? = nil,

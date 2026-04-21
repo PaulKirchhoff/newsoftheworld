@@ -53,12 +53,24 @@ struct TickerView: View {
                     Text(separator)
                         .foregroundStyle(.secondary)
                 }
-                Text(item.title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary)
+                headline(for: item)
                     .lineLimit(1)
             }
         }
+    }
+
+    private func headline(for item: NewsItem) -> Text {
+        let title = Text(item.title)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(.primary)
+
+        guard let category = item.category, !category.isEmpty else {
+            return title
+        }
+        let prefix = Text("\(category): ")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.accentColor)
+        return Text("\(prefix)\(title)")
     }
 
     private func restartAnimation(viewWidth: CGFloat) {

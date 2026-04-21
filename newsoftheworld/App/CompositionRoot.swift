@@ -8,6 +8,7 @@ final class CompositionRoot {
     let settingsWindowController: SettingsWindowController
     let statusBarController: StatusBarController
     let appearanceController: AppearanceController
+    let refreshCoordinator: RefreshCoordinator
 
     init() {
         let settingsRepo = UserDefaultsSettingsRepository()
@@ -18,10 +19,26 @@ final class CompositionRoot {
             fatalError("Sources storage konnte nicht initialisiert werden: \(error)")
         }
         let secretStore = KeychainSecretStore()
+        let httpClient = URLSessionHTTPClient()
+
+        let xmlFetcher = XMLFeedFetcher(httpClient: httpClient)
+        let jsonFetcher = JSONFeedFetcher(httpClient: httpClient)
+        let resolver = FetcherResolver(fetchers: [
+            .rss: xmlFetcher,
+            .atom: xmlFetcher,
+            .jsonAPI: jsonFetcher,
+        ])
 
         let appearance = AppearanceController()
         let tickerVM = TickerViewModel()
         let panelController = TickerPanelController(viewModel: tickerVM)
+
+        let refreshCoordinator = RefreshCoordinator(
+            resolver: resolver,
+            sourcesRepo: sourcesRepo,
+            secretStore: secretStore,
+            tickerVM: tickerVM
+        )
 
         let settingsVM = SettingsViewModel(
             settingsRepo: settingsRepo,
@@ -30,6 +47,9 @@ final class CompositionRoot {
             onSettingsChange: { [tickerVM, appearance] settings in
                 tickerVM.speed = settings.tickerSpeed
                 appearance.apply(settings.appearance)
+            },
+            onSourcesChange: { [refreshCoordinator] in
+                refreshCoordinator.triggerRefresh()
             }
         )
 
@@ -56,9 +76,9 @@ final class CompositionRoot {
         self.settingsWindowController = settingsWindow
         self.statusBarController = statusBar
         self.appearanceController = appearance
+        self.refreshCoordinator = refreshCoordinator
 
-        // Placeholder bis T-040 (NewsFetcher) implementiert ist.
-        tickerVM.display(SampleHeadlines.preview)
+        refreshCoordinator.start()
 
         if settingsVM.appSettings.autoShowTickerOnLaunch {
             panelController.show(relativeTo: statusBar.button)

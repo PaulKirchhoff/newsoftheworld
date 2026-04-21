@@ -12,17 +12,20 @@ final class SettingsViewModel {
     private let sourcesRepo: NewsSourceRepository
     private let secretStore: SecretStore
     private let onSettingsChange: (AppSettings) -> Void
+    private let onSourcesChange: () -> Void
 
     init(
         settingsRepo: SettingsRepository,
         sourcesRepo: NewsSourceRepository,
         secretStore: SecretStore,
-        onSettingsChange: @escaping (AppSettings) -> Void
+        onSettingsChange: @escaping (AppSettings) -> Void,
+        onSourcesChange: @escaping () -> Void
     ) {
         self.settingsRepo = settingsRepo
         self.sourcesRepo = sourcesRepo
         self.secretStore = secretStore
         self.onSettingsChange = onSettingsChange
+        self.onSourcesChange = onSourcesChange
         self.appSettings = settingsRepo.load()
 
         do {
@@ -38,8 +41,21 @@ final class SettingsViewModel {
         onSettingsChange(appSettings)
     }
 
-    func addSource(name: String, type: SourceType, url: URL, apiKey: String?, isEnabled: Bool) {
-        var source = NewsSource(name: name, type: type, endpointURL: url, isEnabled: isEnabled)
+    func addSource(
+        name: String,
+        type: SourceType,
+        url: URL,
+        apiKey: String?,
+        isEnabled: Bool,
+        refreshIntervalSeconds: Int
+    ) {
+        var source = NewsSource(
+            name: name,
+            type: type,
+            endpointURL: url,
+            isEnabled: isEnabled,
+            refreshIntervalSeconds: refreshIntervalSeconds
+        )
         if let apiKey, !apiKey.isEmpty {
             do {
                 try secretStore.setSecret(apiKey, for: keychainReference(for: source.id))
@@ -59,6 +75,7 @@ final class SettingsViewModel {
         type: SourceType,
         url: URL,
         isEnabled: Bool,
+        refreshIntervalSeconds: Int,
         apiKeyUpdate: APIKeyUpdate
     ) {
         guard let index = sources.firstIndex(where: { $0.id == id }) else { return }
@@ -67,6 +84,7 @@ final class SettingsViewModel {
         source.type = type
         source.endpointURL = url
         source.isEnabled = isEnabled
+        source.refreshIntervalSeconds = refreshIntervalSeconds
 
         let reference = keychainReference(for: id)
         switch apiKeyUpdate {
@@ -103,6 +121,7 @@ final class SettingsViewModel {
     private func persistSources() {
         do {
             try sourcesRepo.save(sources)
+            onSourcesChange()
         } catch {
             lastError = "Quellen konnten nicht gespeichert werden: \(error.localizedDescription)"
         }

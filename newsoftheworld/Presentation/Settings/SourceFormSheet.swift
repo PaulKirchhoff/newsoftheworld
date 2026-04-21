@@ -5,6 +5,7 @@ struct SourceDraft {
     var type: SourceType
     var url: URL
     var isEnabled: Bool
+    var refreshIntervalSeconds: Int
     var apiKeyInput: String
     var apiKeyUpdate: APIKeyUpdate
 }
@@ -30,6 +31,7 @@ struct SourceFormSheet: View {
     @State private var type: SourceType = .rss
     @State private var urlString: String = ""
     @State private var isEnabled: Bool = true
+    @State private var refreshIntervalMinutes: Int = 5
     @State private var apiKey: String = ""
     @State private var clearStoredKey: Bool = false
     @State private var hasExistingKey: Bool = false
@@ -53,6 +55,11 @@ struct SourceFormSheet: View {
                         .textContentType(.URL)
                         .autocorrectionDisabled()
                     Toggle("Aktiv", isOn: $isEnabled)
+                    Stepper(
+                        "Aktualisierung: alle \(refreshIntervalMinutes) Min.",
+                        value: $refreshIntervalMinutes,
+                        in: 1...60
+                    )
                 }
 
                 Section("API-Key") {
@@ -102,6 +109,7 @@ struct SourceFormSheet: View {
             type = source.type
             urlString = source.endpointURL.absoluteString
             isEnabled = source.isEnabled
+            refreshIntervalMinutes = max(1, min(60, source.refreshIntervalSeconds / 60))
             hasExistingKey = source.hasAPIKey
         }
     }
@@ -126,6 +134,7 @@ struct SourceFormSheet: View {
             type: type,
             url: url,
             isEnabled: isEnabled,
+            refreshIntervalSeconds: refreshIntervalMinutes * 60,
             apiKeyInput: apiKey,
             apiKeyUpdate: update
         ))

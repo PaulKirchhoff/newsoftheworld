@@ -6,19 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		33F220582F9275BA00837818 /* analyze-project.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F2204A2F9275BA00837818 /* analyze-project.md */; };
-		33F220592F9275BA00837818 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220562F9275BA00837818 /* README.md */; };
-		33F2205A2F9275BA00837818 /* architecture.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220502F9275BA00837818 /* architecture.md */; };
-		33F2205B2F9275BA00837818 /* tasks.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220542F9275BA00837818 /* tasks.md */; };
-		33F2205C2F9275BA00837818 /* review-architecture.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F2204C2F9275BA00837818 /* review-architecture.md */; };
-		33F2205D2F9275BA00837818 /* implement-next-task.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F2204B2F9275BA00837818 /* implement-next-task.md */; };
-		33F2205E2F9275BA00837818 /* decisions.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220522F9275BA00837818 /* decisions.md */; };
-		33F2205F2F9275BA00837818 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F2204E2F9275BA00837818 /* CLAUDE.md */; };
-		33F220602F9275BA00837818 /* requirements.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220532F9275BA00837818 /* requirements.md */; };
-		33F220612F9275BA00837818 /* claude.md in Resources */ = {isa = PBXBuildFile; fileRef = 33F220512F9275BA00837818 /* claude.md */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		33F2202E2F9274F100837818 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -40,16 +27,6 @@
 		33F2201E2F9274F000837818 /* newsoftheworld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = newsoftheworld.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		33F2202D2F9274F100837818 /* newsoftheworldTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = newsoftheworldTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		33F220372F9274F100837818 /* newsoftheworldUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = newsoftheworldUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		33F2204A2F9275BA00837818 /* analyze-project.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "analyze-project.md"; sourceTree = "<group>"; };
-		33F2204B2F9275BA00837818 /* implement-next-task.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "implement-next-task.md"; sourceTree = "<group>"; };
-		33F2204C2F9275BA00837818 /* review-architecture.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "review-architecture.md"; sourceTree = "<group>"; };
-		33F2204E2F9275BA00837818 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
-		33F220502F9275BA00837818 /* architecture.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = architecture.md; sourceTree = "<group>"; };
-		33F220512F9275BA00837818 /* claude.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = claude.md; sourceTree = "<group>"; };
-		33F220522F9275BA00837818 /* decisions.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = decisions.md; sourceTree = "<group>"; };
-		33F220532F9275BA00837818 /* requirements.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = requirements.md; sourceTree = "<group>"; };
-		33F220542F9275BA00837818 /* tasks.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = tasks.md; sourceTree = "<group>"; };
-		33F220562F9275BA00837818 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -102,7 +79,6 @@
 				33F220302F9274F100837818 /* newsoftheworldTests */,
 				33F2203A2F9274F100837818 /* newsoftheworldUITests */,
 				33F2201F2F9274F000837818 /* Products */,
-				33F220572F9275BA00837818 /* newsoftheworld-starter */,
 			);
 			sourceTree = "<group>";
 		};
@@ -114,47 +90,6 @@
 				33F220372F9274F100837818 /* newsoftheworldUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		33F2204D2F9275BA00837818 /* commands */ = {
-			isa = PBXGroup;
-			children = (
-				33F2204A2F9275BA00837818 /* analyze-project.md */,
-				33F2204B2F9275BA00837818 /* implement-next-task.md */,
-				33F2204C2F9275BA00837818 /* review-architecture.md */,
-			);
-			path = commands;
-			sourceTree = "<group>";
-		};
-		33F2204F2F9275BA00837818 /* .claude */ = {
-			isa = PBXGroup;
-			children = (
-				33F2204D2F9275BA00837818 /* commands */,
-				33F2204E2F9275BA00837818 /* CLAUDE.md */,
-			);
-			path = .claude;
-			sourceTree = "<group>";
-		};
-		33F220552F9275BA00837818 /* ai-context */ = {
-			isa = PBXGroup;
-			children = (
-				33F220502F9275BA00837818 /* architecture.md */,
-				33F220512F9275BA00837818 /* claude.md */,
-				33F220522F9275BA00837818 /* decisions.md */,
-				33F220532F9275BA00837818 /* requirements.md */,
-				33F220542F9275BA00837818 /* tasks.md */,
-			);
-			path = "ai-context";
-			sourceTree = "<group>";
-		};
-		33F220572F9275BA00837818 /* newsoftheworld-starter */ = {
-			isa = PBXGroup;
-			children = (
-				33F2204F2F9275BA00837818 /* .claude */,
-				33F220552F9275BA00837818 /* ai-context */,
-				33F220562F9275BA00837818 /* README.md */,
-			);
-			path = "newsoftheworld-starter";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -277,16 +212,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				33F220582F9275BA00837818 /* analyze-project.md in Resources */,
-				33F220592F9275BA00837818 /* README.md in Resources */,
-				33F2205A2F9275BA00837818 /* architecture.md in Resources */,
-				33F2205B2F9275BA00837818 /* tasks.md in Resources */,
-				33F2205C2F9275BA00837818 /* review-architecture.md in Resources */,
-				33F2205D2F9275BA00837818 /* implement-next-task.md in Resources */,
-				33F2205E2F9275BA00837818 /* decisions.md in Resources */,
-				33F2205F2F9275BA00837818 /* CLAUDE.md in Resources */,
-				33F220602F9275BA00837818 /* requirements.md in Resources */,
-				33F220612F9275BA00837818 /* claude.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -467,6 +392,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = newsoftheworld/newsoftheworld.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -498,6 +424,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = newsoftheworld/newsoftheworld.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
