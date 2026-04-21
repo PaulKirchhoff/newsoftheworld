@@ -299,6 +299,23 @@ Das Xcode-Projekt verwendet **File System Synchronized Groups** — neue Dateien
 - Kein Launch-at-Login über Systemeinstellungen (separat geplant).
 - Noch keine Unit-Tests für die Feed-Parser.
 
+## Release bauen
+
+Voraussetzungen (einmalig):
+
+- Apple Developer Program-Mitgliedschaft, Team-ID im Projekt als `DEVELOPMENT_TEAM`
+- "Developer ID Application"-Zertifikat im Keychain
+- App Store Connect API-Key als Notary-Credential unter dem Profil `NEWS_OF_THE_WORLD_NOTARY` abgelegt (`xcrun notarytool store-credentials`)
+- `create-dmg` (`brew install create-dmg`)
+
+Dann:
+
+```sh
+scripts/release.sh 0.1.0
+```
+
+Das Skript archiviert (Release-Konfiguration, Hardened Runtime, Manual-Signing mit Developer-ID), exportiert laut `ExportOptions.plist`, signiert, reicht die .app-Archive und die DMG nacheinander bei Apple zur Notarisierung ein, stapelt die Tickets und berechnet die SHA-256 für die Homebrew-Cask-Formel. Output landet unter `build/release/`.
+
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE).
