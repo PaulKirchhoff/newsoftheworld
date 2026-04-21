@@ -6,44 +6,45 @@ struct TickerView: View {
     let separator: String
 
     @State private var contentWidth: CGFloat = 0
-    @State private var offset: CGFloat = 0
-    @State private var animationID = UUID()
+    @State private var viewWidth: CGFloat = 0
+    @State private var anchorDate: Date = .distantPast
+    @State private var anchorOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
-            let viewWidth = geo.size.width
+            TimelineView(.animation) { context in
+                let currentViewWidth = geo.size.width
+                let offset = visualOffset(now: context.date, viewWidth: currentViewWidth)
 
-            tickerRow
-                .fixedSize(horizontal: true, vertical: false)
-                .background(
-                    GeometryReader { contentGeo in
-                        Color.clear.preference(
-                            key: TickerContentWidthKey.self,
-                            value: contentGeo.size.width
-                        )
-                    }
-                )
-                .offset(x: offset)
-                .frame(width: viewWidth, alignment: .leading)
-                .clipped()
-                .onPreferenceChange(TickerContentWidthKey.self) { width in
-                    guard width != contentWidth else { return }
-                    contentWidth = width
-                    restartAnimation(viewWidth: viewWidth)
+                tickerRow
+                    .fixedSize(horizontal: true, vertical: false)
+                    .background(widthReader)
+                    .offset(x: offset)
+                    .frame(width: currentViewWidth, alignment: .leading)
+                    .clipped()
+            }
+            .onChange(of: geo.size.width, initial: true) { _, newValue in
+                viewWidth = newValue
+                if anchorDate == .distantPast, newValue > 0 {
+                    anchorDate = Date()
+                    anchorOffset = newValue
                 }
-                .onChange(of: viewWidth) { _, newValue in
-                    restartAnimation(viewWidth: newValue)
-                }
-                .onChange(of: speed) { _, _ in
-                    restartAnimation(viewWidth: viewWidth)
-                }
-                .onChange(of: items) { _, _ in
-                    animationID = UUID()
-                }
-                .id(animationID)
+            }
         }
         .frame(height: 24)
         .padding(.horizontal, 12)
+        .onPreferenceChange(TickerContentWidthKey.self) { newWidth in
+            if newWidth != contentWidth {
+                contentWidth = newWidth
+            }
+        }
+        .onChange(of: speed) { oldSpeed, _ in
+            rebase(usingSpeed: oldSpeed)
+        }
+        .onChange(of: items) { _, _ in
+            anchorDate = Date()
+            anchorOffset = viewWidth
+        }
     }
 
     private var tickerRow: some View {
@@ -56,6 +57,15 @@ struct TickerView: View {
                 headline(for: item)
                     .lineLimit(1)
             }
+        }
+    }
+
+    private var widthReader: some View {
+        GeometryReader { contentGeo in
+            Color.clear.preference(
+                key: TickerContentWidthKey.self,
+                value: contentGeo.size.width
+            )
         }
     }
 
@@ -73,14 +83,22 @@ struct TickerView: View {
         return Text("\(prefix)\(title)")
     }
 
-    private func restartAnimation(viewWidth: CGFloat) {
-        guard contentWidth > 0, viewWidth > 0, speed > 0 else { return }
-        let distance = contentWidth + viewWidth
-        let duration = Double(distance) / speed
-        offset = viewWidth
-        withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
-            offset = -contentWidth
+    private func rebase(usingSpeed oldSpeed: Double) {
+        guard anchorDate != .distantPast else { return }
+        let elapsed = CGFloat(Date().timeIntervalSince(anchorDate))
+        anchorOffset -= elapsed * CGFloat(oldSpeed)
+        anchorDate = Date()
+    }
+
+    private func visualOffset(now: Date, viewWidth: CGFloat) -> CGFloat {
+        guard contentWidth > 0, viewWidth > 0, speed > 0, anchorDate != .distantPast else {
+            return anchorOffset
         }
+        let cycleLength = contentWidth + viewWidth
+        let elapsed = CGFloat(now.timeIntervalSince(anchorDate))
+        let virtual = anchorOffset - elapsed * CGFloat(speed)
+        let cyclesCompleted = floor((viewWidth - virtual) / cycleLength)
+        return virtual + cyclesCompleted * cycleLength
     }
 }
 

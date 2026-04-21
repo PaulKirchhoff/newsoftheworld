@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 @MainActor
 final class RefreshCoordinator {
@@ -6,23 +7,25 @@ final class RefreshCoordinator {
     private let sourcesRepo: NewsSourceRepository
     private let secretStore: SecretStore
     private let tickerVM: TickerViewModel
+    private let statusStore: SourceStatusStore
 
     private let minimumIntervalSeconds: Int = 30
 
     private var sourceTasks: [UUID: Task<Void, Never>] = [:]
     private var itemsBySource: [UUID: [NewsItem]] = [:]
-    private var errorsBySource: [UUID: String] = [:]
 
     init(
         resolver: FetcherResolver,
         sourcesRepo: NewsSourceRepository,
         secretStore: SecretStore,
-        tickerVM: TickerViewModel
+        tickerVM: TickerViewModel,
+        statusStore: SourceStatusStore
     ) {
         self.resolver = resolver
         self.sourcesRepo = sourcesRepo
         self.secretStore = secretStore
         self.tickerVM = tickerVM
+        self.statusStore = statusStore
     }
 
     func start() {
@@ -33,16 +36,31 @@ final class RefreshCoordinator {
         reconcile()
     }
 
+    func refresh(sourceID: UUID) {
+        guard
+            let sources = try? sourcesRepo.load(),
+            let source = sources.first(where: { $0.id == sourceID && $0.isEnabled })
+        else { return }
+        Task { [weak self] in
+            await self?.fetchOnce(for: source)
+        }
+    }
+
     func stop() {
         for task in sourceTasks.values { task.cancel() }
         sourceTasks.removeAll()
         itemsBySource.removeAll()
-        errorsBySource.removeAll()
         updateTickerState()
     }
 
     private func reconcile() {
-        let sources = (try? sourcesRepo.load()) ?? []
+        let sources: [NewsSource]
+        do {
+            sources = try sourcesRepo.load()
+        } catch {
+            AppLog.sources.error("Sources konnten nicht geladen werden: \(error.localizedDescription, privacy: .public)")
+            sources = []
+        }
         let activeByID = Dictionary(
             uniqueKeysWithValues: sources.filter(\.isEnabled).map { ($0.id, $0) }
         )
@@ -51,7 +69,7 @@ final class RefreshCoordinator {
             sourceTasks[id]?.cancel()
             sourceTasks.removeValue(forKey: id)
             itemsBySource.removeValue(forKey: id)
-            errorsBySource.removeValue(forKey: id)
+            statusStore.remove(sourceID: id)
         }
 
         for (id, source) in activeByID {
@@ -74,7 +92,9 @@ final class RefreshCoordinator {
 
     private func fetchOnce(for source: NewsSource) async {
         guard let fetcher = resolver.fetcher(for: source.type) else {
-            errorsBySource[source.id] = "Kein Fetcher für Typ \(source.type.localizedName)"
+            let message = "Kein Fetcher für Typ \(source.type.localizedName)"
+            AppLog.fetch.error("\(message, privacy: .public) [source=\(source.id.uuidString, privacy: .public)]")
+            statusStore.recordFailure(sourceID: source.id, message: message)
             updateTickerState()
             return
         }
@@ -90,13 +110,15 @@ final class RefreshCoordinator {
             let items = try await fetcher.fetch(source: source, apiKey: apiKey)
             guard !Task.isCancelled else { return }
             itemsBySource[source.id] = items
-            errorsBySource.removeValue(forKey: source.id)
+            statusStore.recordSuccess(sourceID: source.id, itemCount: items.count)
+            AppLog.fetch.debug("Fetch ok [source=\(source.id.uuidString, privacy: .public), count=\(items.count, privacy: .public)]")
         } catch is CancellationError {
             return
         } catch {
             guard !Task.isCancelled else { return }
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            errorsBySource[source.id] = message
+            statusStore.recordFailure(sourceID: source.id, message: message)
+            AppLog.fetch.warning("Fetch failed [source=\(source.id.uuidString, privacy: .public)]: \(message, privacy: .public)")
         }
         updateTickerState()
     }
@@ -116,7 +138,8 @@ final class RefreshCoordinator {
             return
         }
 
-        if let firstError = errorsBySource.values.first {
+        let errorMessages = statusStore.statuses.values.compactMap { $0.lastErrorMessage }
+        if let firstError = errorMessages.first {
             tickerVM.setError(firstError)
             return
         }

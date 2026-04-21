@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 @MainActor
 @Observable
@@ -7,38 +8,64 @@ final class SettingsViewModel {
     var appSettings: AppSettings
     var sources: [NewsSource]
     var lastError: String?
+    var launchAtLoginState: LaunchAtLoginState
+
+    let statusStore: SourceStatusStore
 
     private let settingsRepo: SettingsRepository
     private let sourcesRepo: NewsSourceRepository
     private let secretStore: SecretStore
+    private let launchAtLoginService: LaunchAtLoginService
+    private let sourceTester: SourceTester
     private let onSettingsChange: (AppSettings) -> Void
     private let onSourcesChange: () -> Void
+    private let onRefreshRequest: (UUID) -> Void
 
     init(
         settingsRepo: SettingsRepository,
         sourcesRepo: NewsSourceRepository,
         secretStore: SecretStore,
+        launchAtLoginService: LaunchAtLoginService,
+        sourceTester: SourceTester,
+        statusStore: SourceStatusStore,
         onSettingsChange: @escaping (AppSettings) -> Void,
-        onSourcesChange: @escaping () -> Void
+        onSourcesChange: @escaping () -> Void,
+        onRefreshRequest: @escaping (UUID) -> Void
     ) {
         self.settingsRepo = settingsRepo
         self.sourcesRepo = sourcesRepo
         self.secretStore = secretStore
+        self.launchAtLoginService = launchAtLoginService
+        self.sourceTester = sourceTester
+        self.statusStore = statusStore
         self.onSettingsChange = onSettingsChange
         self.onSourcesChange = onSourcesChange
+        self.onRefreshRequest = onRefreshRequest
         self.appSettings = settingsRepo.load()
+        self.launchAtLoginState = launchAtLoginService.state
 
         do {
             self.sources = try sourcesRepo.load()
         } catch {
             self.sources = []
             self.lastError = "Quellen konnten nicht geladen werden: \(error.localizedDescription)"
+            AppLog.sources.error("Load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
     func persistSettings() {
         settingsRepo.save(appSettings)
         onSettingsChange(appSettings)
+    }
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            try launchAtLoginService.setEnabled(enabled)
+            launchAtLoginState = launchAtLoginService.state
+        } catch {
+            lastError = "Start beim Anmelden konnte nicht gesetzt werden: \(error.localizedDescription)"
+            launchAtLoginState = launchAtLoginService.state
+        }
     }
 
     func addSource(
@@ -118,12 +145,37 @@ final class SettingsViewModel {
         persistSources()
     }
 
+    func refreshNow(sourceID: UUID) {
+        onRefreshRequest(sourceID)
+    }
+
+    func testSource(
+        name: String,
+        type: SourceType,
+        url: URL,
+        enteredAPIKey: String,
+        existingSourceID: UUID?
+    ) async -> SourceTestResult {
+        let apiKey: String?
+        if !enteredAPIKey.isEmpty {
+            apiKey = enteredAPIKey
+        } else if let id = existingSourceID,
+                  let existing = sources.first(where: { $0.id == id }),
+                  existing.hasAPIKey {
+            apiKey = try? secretStore.secret(for: keychainReference(for: id))
+        } else {
+            apiKey = nil
+        }
+        return await sourceTester.test(name: name, type: type, url: url, apiKey: apiKey)
+    }
+
     private func persistSources() {
         do {
             try sourcesRepo.save(sources)
             onSourcesChange()
         } catch {
             lastError = "Quellen konnten nicht gespeichert werden: \(error.localizedDescription)"
+            AppLog.sources.error("Save failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 

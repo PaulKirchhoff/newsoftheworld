@@ -12,7 +12,7 @@ struct SettingsView: View {
                 .tabItem { Label("Quellen", systemImage: "antenna.radiowaves.left.and.right") }
         }
         .padding(16)
-        .frame(minWidth: 540, minHeight: 420)
+        .frame(minWidth: 560, minHeight: 460)
     }
 }
 
@@ -31,8 +31,41 @@ private struct GeneralSettingsView: View {
                 .labelsHidden()
             }
 
+            Section("Ticker") {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Geschwindigkeit")
+                        Spacer()
+                        Text("\(Int(viewModel.appSettings.tickerSpeed)) pt/s")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Slider(
+                        value: tickerSpeedBinding,
+                        in: 20...200,
+                        step: 10
+                    ) {
+                        Text("Geschwindigkeit")
+                    } minimumValueLabel: {
+                        Text("Langsam").font(.caption).foregroundStyle(.secondary)
+                    } maximumValueLabel: {
+                        Text("Schnell").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             Section("Start") {
                 Toggle("Ticker beim Start automatisch anzeigen", isOn: autoShowBinding)
+                Toggle(
+                    "Beim Anmelden starten",
+                    isOn: launchAtLoginBinding
+                )
+                .disabled(viewModel.launchAtLoginState == .notAvailable)
+                if viewModel.launchAtLoginState == .requiresApproval {
+                    Text("Aktivierung muss in den Systemeinstellungen → Allgemein → Anmeldeobjekte bestätigt werden.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .formStyle(.grouped)
@@ -57,6 +90,23 @@ private struct GeneralSettingsView: View {
             }
         )
     }
+
+    private var tickerSpeedBinding: Binding<Double> {
+        Binding(
+            get: { viewModel.appSettings.tickerSpeed },
+            set: {
+                viewModel.appSettings.tickerSpeed = $0
+                viewModel.persistSettings()
+            }
+        )
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.launchAtLoginState == .enabled },
+            set: { viewModel.setLaunchAtLogin($0) }
+        )
+    }
 }
 
 private struct SourcesSettingsView: View {
@@ -76,6 +126,19 @@ private struct SourcesSettingsView: View {
         .sheet(item: $editing) { mode in
             SourceFormSheet(
                 mode: mode,
+                onTest: { draft in
+                    let existingID: UUID? = {
+                        if case .edit(let s) = mode { return s.id }
+                        return nil
+                    }()
+                    return await viewModel.testSource(
+                        name: draft.name,
+                        type: draft.type,
+                        url: draft.url,
+                        enteredAPIKey: draft.apiKeyInput,
+                        existingSourceID: existingID
+                    )
+                },
                 onCommit: { draft in
                     switch mode {
                     case .add:
@@ -137,15 +200,23 @@ private struct SourcesSettingsView: View {
     private var list: some View {
         List {
             ForEach(viewModel.sources) { source in
-                SourceRow(source: source)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) { editing = .edit(source) }
-                    .contextMenu {
-                        Button("Bearbeiten") { editing = .edit(source) }
-                        Button("Entfernen", role: .destructive) {
-                            viewModel.deleteSource(id: source.id)
-                        }
+                SourceRow(
+                    source: source,
+                    status: viewModel.statusStore.statuses[source.id]
+                )
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { editing = .edit(source) }
+                .contextMenu {
+                    Button("Bearbeiten") { editing = .edit(source) }
+                    Button("Jetzt aktualisieren") {
+                        viewModel.refreshNow(sourceID: source.id)
                     }
+                    .disabled(!source.isEnabled)
+                    Divider()
+                    Button("Entfernen", role: .destructive) {
+                        viewModel.deleteSource(id: source.id)
+                    }
+                }
             }
         }
         .listStyle(.inset)
@@ -166,11 +237,13 @@ private struct SourcesSettingsView: View {
 
 private struct SourceRow: View {
     let source: NewsSource
+    let status: SourceFetchStatus?
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: source.isEnabled ? "dot.radiowaves.left.and.right" : "pause.circle")
-                .foregroundStyle(source.isEnabled ? Color.accentColor : .secondary)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: iconName)
+                .foregroundStyle(iconColor)
+                .padding(.top, 2)
             VStack(alignment: .leading, spacing: 2) {
                 Text(source.name)
                     .font(.body)
@@ -179,8 +252,57 @@ private struct SourceRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                statusLine
             }
             Spacer()
+            badges
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var iconName: String {
+        if !source.isEnabled { return "pause.circle" }
+        if status?.lastErrorMessage != nil { return "exclamationmark.triangle" }
+        return "dot.radiowaves.left.and.right"
+    }
+
+    private var iconColor: Color {
+        if !source.isEnabled { return .secondary }
+        if status?.lastErrorMessage != nil { return .red }
+        return .accentColor
+    }
+
+    @ViewBuilder
+    private var statusLine: some View {
+        if !source.isEnabled {
+            Text("Deaktiviert")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        } else if let status {
+            if let error = status.lastErrorMessage {
+                Text("Fehler: \(error)")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } else if let last = status.lastFetchAt {
+                Text("Aktualisiert \(last, style: .relative) vor · \(status.lastItemCount) Items")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Wird geladen …")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("Noch nicht abgerufen")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var badges: some View {
+        HStack(spacing: 6) {
             Text(source.type.localizedName)
                 .font(.caption)
                 .padding(.horizontal, 6)
@@ -192,6 +314,5 @@ private struct SourceRow: View {
                     .help("API-Key gespeichert")
             }
         }
-        .padding(.vertical, 4)
     }
 }

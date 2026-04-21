@@ -24,6 +24,7 @@ struct SourceFormSheet: View {
     }
 
     let mode: Mode
+    let onTest: (SourceDraft) async -> SourceTestResult
     let onCommit: (SourceDraft) -> Void
     let onCancel: () -> Void
 
@@ -35,6 +36,15 @@ struct SourceFormSheet: View {
     @State private var apiKey: String = ""
     @State private var clearStoredKey: Bool = false
     @State private var hasExistingKey: Bool = false
+
+    @State private var testState: TestState = .idle
+
+    private enum TestState: Equatable {
+        case idle
+        case running
+        case success(count: Int)
+        case failure(String)
+    }
 
     private var trimmedURL: String { urlString.trimmingCharacters(in: .whitespaces) }
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
@@ -85,6 +95,24 @@ struct SourceFormSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                Section("Verbindung testen") {
+                    HStack(spacing: 8) {
+                        Button {
+                            runTest()
+                        } label: {
+                            if case .running = testState {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Text("Testen")
+                            }
+                        }
+                        .disabled(!isValid || testState == .running)
+
+                        testResultView
+                        Spacer()
+                    }
+                }
             }
             .formStyle(.grouped)
 
@@ -99,8 +127,29 @@ struct SourceFormSheet: View {
             }
             .padding(12)
         }
-        .frame(width: 460, height: 420)
+        .frame(width: 480, height: 520)
         .onAppear(perform: prefill)
+    }
+
+    @ViewBuilder
+    private var testResultView: some View {
+        switch testState {
+        case .idle:
+            EmptyView()
+        case .running:
+            Text("Wird geprüft …")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .success(let count):
+            Label("\(count) Items geladen", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        case .failure(let message):
+            Label(message, systemImage: "xmark.octagon.fill")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .lineLimit(2)
+        }
     }
 
     private func prefill() {
@@ -114,8 +163,25 @@ struct SourceFormSheet: View {
         }
     }
 
+    private func runTest() {
+        guard let url = parsedURL else { return }
+        let draft = currentDraft(url: url)
+        testState = .running
+        Task { @MainActor in
+            let result = await onTest(draft)
+            switch result {
+            case .success(let count): testState = .success(count: count)
+            case .failure(let message): testState = .failure(message)
+            }
+        }
+    }
+
     private func commit() {
         guard let url = parsedURL else { return }
+        onCommit(currentDraft(url: url))
+    }
+
+    private func currentDraft(url: URL) -> SourceDraft {
         let update: APIKeyUpdate
         switch mode {
         case .add:
@@ -129,7 +195,7 @@ struct SourceFormSheet: View {
                 update = .unchanged
             }
         }
-        onCommit(SourceDraft(
+        return SourceDraft(
             name: trimmedName,
             type: type,
             url: url,
@@ -137,6 +203,6 @@ struct SourceFormSheet: View {
             refreshIntervalSeconds: refreshIntervalMinutes * 60,
             apiKeyInput: apiKey,
             apiKeyUpdate: update
-        ))
+        )
     }
 }
