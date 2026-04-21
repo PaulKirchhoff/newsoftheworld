@@ -301,4 +301,4 @@ Das Xcode-Projekt verwendet **File System Synchronized Groups** — neue Dateien
 
 ## Lizenz
 
-Noch nicht festgelegt. Ohne explizite Lizenz gilt "all rights reserved" nach Urheberrecht.
+MIT — siehe [LICENSE](LICENSE).
