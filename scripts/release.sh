@@ -28,6 +28,17 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
 
+# Force full Xcode even if xcode-select points at Command Line Tools.
+if [[ -z "${DEVELOPER_DIR:-}" ]] || [[ "$DEVELOPER_DIR" == *CommandLineTools* ]]; then
+    if [[ -d /Applications/Xcode.app/Contents/Developer ]]; then
+        export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+    else
+        echo "Xcode.app not found at /Applications/Xcode.app — install Xcode or" >&2
+        echo "run: sudo xcode-select -s /path/to/Xcode.app/Contents/Developer" >&2
+        exit 1
+    fi
+fi
+
 SCHEME="newsoftheworld"
 PROJECT="newsoftheworld.xcodeproj"
 APP_NAME="newsoftheworld"
