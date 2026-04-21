@@ -14,6 +14,8 @@ final class CompositionRoot {
 
     init() {
         let settingsRepo = UserDefaultsSettingsRepository()
+        let initialSettings = settingsRepo.load()
+
         let sourcesRepo: NewsSourceRepository
         do {
             sourcesRepo = try JSONNewsSourceRepository()
@@ -36,7 +38,18 @@ final class CompositionRoot {
 
         let appearance = AppearanceController()
         let tickerVM = TickerViewModel()
-        let panelController = TickerPanelController(viewModel: tickerVM)
+        tickerVM.speed = initialSettings.tickerSpeed
+        tickerVM.fontSize = initialSettings.tickerFontSize
+        appearance.apply(initialSettings.appearance)
+
+        let initialPanelSize = NSSize(
+            width: initialSettings.tickerPanelWidth,
+            height: TickerPanelController.panelHeight(forFontSize: initialSettings.tickerFontSize)
+        )
+        let panelController = TickerPanelController(
+            viewModel: tickerVM,
+            initialSize: initialPanelSize
+        )
         let statusStore = SourceStatusStore()
 
         let refreshCoordinator = RefreshCoordinator(
@@ -54,9 +67,16 @@ final class CompositionRoot {
             launchAtLoginService: launchAtLogin,
             sourceTester: sourceTester,
             statusStore: statusStore,
-            onSettingsChange: { [tickerVM, appearance] settings in
+            onSettingsChange: { [tickerVM, appearance, panelController] settings in
                 tickerVM.speed = settings.tickerSpeed
+                tickerVM.fontSize = settings.tickerFontSize
                 appearance.apply(settings.appearance)
+                panelController.updateGeometry(
+                    size: NSSize(
+                        width: settings.tickerPanelWidth,
+                        height: TickerPanelController.panelHeight(forFontSize: settings.tickerFontSize)
+                    )
+                )
             },
             onSourcesChange: { [refreshCoordinator] in
                 refreshCoordinator.triggerRefresh()
@@ -66,14 +86,11 @@ final class CompositionRoot {
             }
         )
 
-        tickerVM.speed = settingsVM.appSettings.tickerSpeed
-        appearance.apply(settingsVM.appSettings.appearance)
-
         let settingsWindow = SettingsWindowController(viewModel: settingsVM)
 
         let statusBar = StatusBarController(
-            onToggleTicker: { [panelController] button in
-                panelController.toggle(relativeTo: button)
+            onToggleTicker: { [panelController] in
+                panelController.toggle()
             },
             onOpenSettings: { [settingsWindow] in
                 settingsWindow.show()
@@ -82,6 +99,8 @@ final class CompositionRoot {
                 panelController.isVisible
             }
         )
+
+        panelController.anchor = { [weak statusBar] in statusBar?.button }
 
         self.tickerViewModel = tickerVM
         self.settingsViewModel = settingsVM
@@ -96,7 +115,7 @@ final class CompositionRoot {
         refreshCoordinator.start()
 
         if settingsVM.appSettings.autoShowTickerOnLaunch {
-            panelController.show(relativeTo: statusBar.button)
+            panelController.show()
         }
     }
 }

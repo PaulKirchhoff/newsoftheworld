@@ -4,12 +4,12 @@ import AppKit
 final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let statusMenu = NSMenu()
-    private let onToggleTicker: (NSStatusBarButton?) -> Void
+    private let onToggleTicker: () -> Void
     private let onOpenSettings: () -> Void
     private let isTickerVisible: () -> Bool
 
     init(
-        onToggleTicker: @escaping (NSStatusBarButton?) -> Void,
+        onToggleTicker: @escaping () -> Void,
         onOpenSettings: @escaping () -> Void,
         isTickerVisible: @escaping () -> Bool
     ) {
@@ -71,7 +71,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func didSelectTicker() {
-        onToggleTicker(statusItem.button)
+        onToggleTicker()
     }
 
     @objc private func didSelectSettings() {

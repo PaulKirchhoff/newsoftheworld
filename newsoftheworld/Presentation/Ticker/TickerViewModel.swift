@@ -6,6 +6,7 @@ import Observation
 final class TickerViewModel {
     var state: TickerState = .idle
     var speed: Double = 60
+    var fontSize: Double = 13
     var separator: String = "   •   "
 
     func display(_ items: [NewsItem]) {

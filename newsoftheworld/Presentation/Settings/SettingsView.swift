@@ -52,6 +52,48 @@ private struct GeneralSettingsView: View {
                         Text("Schnell").font(.caption).foregroundStyle(.secondary)
                     }
                 }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Schriftgröße")
+                        Spacer()
+                        Text("\(Int(viewModel.appSettings.tickerFontSize)) pt")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Slider(
+                        value: tickerFontSizeBinding,
+                        in: 11...22,
+                        step: 1
+                    ) {
+                        Text("Schriftgröße")
+                    } minimumValueLabel: {
+                        Text("A").font(.caption).foregroundStyle(.secondary)
+                    } maximumValueLabel: {
+                        Text("A").font(.title3).foregroundStyle(.secondary)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Breite")
+                        Spacer()
+                        Text("\(Int(viewModel.appSettings.tickerPanelWidth)) pt")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Slider(
+                        value: tickerPanelWidthBinding,
+                        in: 320...1200,
+                        step: 20
+                    ) {
+                        Text("Breite")
+                    } minimumValueLabel: {
+                        Text("Schmal").font(.caption).foregroundStyle(.secondary)
+                    } maximumValueLabel: {
+                        Text("Breit").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Section("Start") {
@@ -96,6 +138,26 @@ private struct GeneralSettingsView: View {
             get: { viewModel.appSettings.tickerSpeed },
             set: {
                 viewModel.appSettings.tickerSpeed = $0
+                viewModel.persistSettings()
+            }
+        )
+    }
+
+    private var tickerFontSizeBinding: Binding<Double> {
+        Binding(
+            get: { viewModel.appSettings.tickerFontSize },
+            set: {
+                viewModel.appSettings.tickerFontSize = $0
+                viewModel.persistSettings()
+            }
+        )
+    }
+
+    private var tickerPanelWidthBinding: Binding<Double> {
+        Binding(
+            get: { viewModel.appSettings.tickerPanelWidth },
+            set: {
+                viewModel.appSettings.tickerPanelWidth = $0
                 viewModel.persistSettings()
             }
         )

@@ -5,18 +5,22 @@ import SwiftUI
 final class TickerPanelController {
     private let viewModel: TickerViewModel
     private var panel: NSPanel?
+    private var desiredSize: NSSize
 
-    init(viewModel: TickerViewModel) {
+    var anchor: () -> NSStatusBarButton? = { nil }
+
+    init(viewModel: TickerViewModel, initialSize: NSSize) {
         self.viewModel = viewModel
+        self.desiredSize = initialSize
     }
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
-    func toggle(relativeTo statusButton: NSStatusBarButton?) {
+    func toggle() {
         if isVisible {
             hide()
         } else {
-            show(relativeTo: statusButton)
+            show()
         }
     }
 
@@ -24,47 +28,71 @@ final class TickerPanelController {
         panel?.orderOut(nil)
     }
 
-    func show(relativeTo statusButton: NSStatusBarButton?) {
+    func shutdown() {
+        if let panel {
+            panel.contentViewController = nil
+            panel.close()
+        }
+        panel = nil
+    }
+
+    func show() {
         let panel = panel ?? makePanel()
         self.panel = panel
-        position(panel: panel, relativeTo: statusButton)
+        applyDesiredSize(to: panel)
+        position(panel: panel)
         panel.orderFrontRegardless()
+    }
+
+    func updateGeometry(size: NSSize) {
+        desiredSize = size
+        guard let panel else { return }
+        applyDesiredSize(to: panel)
+        if panel.isVisible {
+            position(panel: panel)
+        }
+    }
+
+    static func panelHeight(forFontSize fontSize: Double) -> CGFloat {
+        max(22, ceil(fontSize * 1.5) + 6)
+    }
+
+    private func applyDesiredSize(to panel: NSPanel) {
+        var frame = panel.frame
+        frame.size = desiredSize
+        panel.setFrame(frame, display: true)
     }
 
     private func makePanel() -> NSPanel {
         let hosting = NSHostingController(rootView: TickerPanelView(viewModel: viewModel))
-        hosting.sizingOptions = [.preferredContentSize]
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 44),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .utilityWindow],
+            contentRect: NSRect(origin: .zero, size: desiredSize),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true
         )
         panel.contentViewController = hosting
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.hidesOnDeactivate = false
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        panel.standardWindowButton(.closeButton)?.isHidden = true
-        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
         return panel
     }
 
-    private func position(panel: NSPanel, relativeTo statusButton: NSStatusBarButton?) {
-        guard let buttonWindow = statusButton?.window else {
+    private func position(panel: NSPanel) {
+        guard let buttonWindow = anchor()?.window else {
             panel.center()
             return
         }
         let buttonFrame = buttonWindow.frame
-        let panelSize = panel.frame.size
-        let x = buttonFrame.midX - panelSize.width / 2
-        let y = buttonFrame.minY - panelSize.height - 4
+        let x = buttonFrame.midX - panel.frame.width / 2
+        let y = buttonFrame.minY - panel.frame.height - 4
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
 }

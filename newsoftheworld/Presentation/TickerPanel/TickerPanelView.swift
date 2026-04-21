@@ -3,13 +3,13 @@ import SwiftUI
 struct TickerPanelView: View {
     @Bindable var viewModel: TickerViewModel
 
+    private let cornerRadius: CGFloat = 10
+
     var body: some View {
-        ZStack {
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .frame(width: 520, height: 44)
-        .background(.regularMaterial)
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
     @ViewBuilder
@@ -18,29 +18,34 @@ struct TickerPanelView: View {
         case .idle:
             TickerMessageView(
                 systemImage: "antenna.radiowaves.left.and.right.slash",
-                text: "Keine Quellen konfiguriert"
+                text: "Keine Quellen konfiguriert",
+                fontSize: CGFloat(viewModel.fontSize)
             )
         case .loading:
             TickerMessageView(
                 systemImage: "arrow.triangle.2.circlepath",
-                text: "Lade Nachrichten …"
+                text: "Lade Nachrichten …",
+                fontSize: CGFloat(viewModel.fontSize)
             )
         case .empty:
             TickerMessageView(
                 systemImage: "tray",
-                text: "Keine Nachrichten"
+                text: "Keine Nachrichten",
+                fontSize: CGFloat(viewModel.fontSize)
             )
         case .error(let message):
             TickerMessageView(
                 systemImage: "exclamationmark.triangle",
                 text: message,
+                fontSize: CGFloat(viewModel.fontSize),
                 tint: .red
             )
         case .loaded(let items):
             TickerView(
                 items: items,
                 speed: viewModel.speed,
-                separator: viewModel.separator
+                separator: viewModel.separator,
+                fontSize: CGFloat(viewModel.fontSize)
             )
         }
     }
@@ -49,15 +54,18 @@ struct TickerPanelView: View {
 private struct TickerMessageView: View {
     let systemImage: String
     let text: String
+    let fontSize: CGFloat
     var tint: Color = .secondary
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
             Text(text)
+                .font(.system(size: fontSize, weight: .medium))
                 .lineLimit(1)
         }
         .foregroundStyle(tint)
         .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

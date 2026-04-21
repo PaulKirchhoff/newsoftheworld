@@ -4,6 +4,7 @@ struct TickerView: View {
     let items: [NewsItem]
     let speed: Double
     let separator: String
+    let fontSize: CGFloat
 
     @State private var contentWidth: CGFloat = 0
     @State private var viewWidth: CGFloat = 0
@@ -20,26 +21,28 @@ struct TickerView: View {
                     .fixedSize(horizontal: true, vertical: false)
                     .background(widthReader)
                     .offset(x: offset)
-                    .frame(width: currentViewWidth, alignment: .leading)
+                    .frame(width: currentViewWidth, height: geo.size.height, alignment: .leading)
                     .clipped()
             }
             .onChange(of: geo.size.width, initial: true) { _, newValue in
-                viewWidth = newValue
                 if anchorDate == .distantPast, newValue > 0 {
                     anchorDate = Date()
                     anchorOffset = newValue
+                    viewWidth = newValue
+                } else if newValue != viewWidth {
+                    rebaseForSizeChange(oldViewWidth: viewWidth, oldContentWidth: contentWidth)
+                    viewWidth = newValue
                 }
             }
         }
-        .frame(height: 24)
         .padding(.horizontal, 12)
         .onPreferenceChange(TickerContentWidthKey.self) { newWidth in
-            if newWidth != contentWidth {
-                contentWidth = newWidth
-            }
+            guard newWidth != contentWidth else { return }
+            rebaseForSizeChange(oldViewWidth: viewWidth, oldContentWidth: contentWidth)
+            contentWidth = newWidth
         }
         .onChange(of: speed) { oldSpeed, _ in
-            rebase(usingSpeed: oldSpeed)
+            rebaseForSpeedChange(oldSpeed: oldSpeed)
         }
         .onChange(of: items) { _, _ in
             anchorDate = Date()
@@ -52,6 +55,7 @@ struct TickerView: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 {
                     Text(separator)
+                        .font(.system(size: fontSize, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 headline(for: item)
@@ -71,23 +75,36 @@ struct TickerView: View {
 
     private func headline(for item: NewsItem) -> Text {
         let title = Text(item.title)
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: fontSize, weight: .medium))
             .foregroundColor(.primary)
 
         guard let category = item.category, !category.isEmpty else {
             return title
         }
         let prefix = Text("\(category): ")
-            .font(.system(size: 13, weight: .semibold))
+            .font(.system(size: fontSize, weight: .semibold))
             .foregroundColor(.accentColor)
         return Text("\(prefix)\(title)")
     }
 
-    private func rebase(usingSpeed oldSpeed: Double) {
+    private func rebaseForSpeedChange(oldSpeed: Double) {
         guard anchorDate != .distantPast else { return }
         let elapsed = CGFloat(Date().timeIntervalSince(anchorDate))
         anchorOffset -= elapsed * CGFloat(oldSpeed)
         anchorDate = Date()
+    }
+
+    private func rebaseForSizeChange(oldViewWidth: CGFloat, oldContentWidth: CGFloat) {
+        guard anchorDate != .distantPast else { return }
+        let oldCycleLength = oldContentWidth + oldViewWidth
+        guard oldCycleLength > 0 else { return }
+        let now = Date()
+        let elapsed = CGFloat(now.timeIntervalSince(anchorDate))
+        let oldVirtual = anchorOffset - elapsed * CGFloat(speed)
+        let cyclesCompleted = floor((oldViewWidth - oldVirtual) / oldCycleLength)
+        let visible = oldVirtual + cyclesCompleted * oldCycleLength
+        anchorOffset = visible
+        anchorDate = now
     }
 
     private func visualOffset(now: Date, viewWidth: CGFloat) -> CGFloat {
