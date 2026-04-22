@@ -1,73 +1,80 @@
 # News of the World
 
-Eine leichtgewichtige native macOS-Menüleisten-App, die Schlagzeilen aus selbst konfigurierten Quellen als Laufschrift unter der Top Bar anzeigt. Unterstützt RSS, Atom und generische JSON-APIs, optional mit API-Key-Authentifizierung über den macOS-Keychain.
+A lightweight native macOS menu-bar app that displays headlines from your own sources as a horizontal ticker under the system menu bar. Supports RSS, Atom and generic JSON APIs, optionally authenticated with an API key stored securely in the macOS Keychain.
 
-![Ticker-Panel unter der Menüleiste](docs/screenshots/ticker.png)
+![Ticker panel under the menu bar](docs/screenshots/ticker.png)
 
-## Inhalt
+## Contents
 
-- [Überblick](#überblick)
-- [Systemvoraussetzungen](#systemvoraussetzungen)
-- [Schnellstart](#schnellstart)
-- [Installation](#installation)
-- [Verwendung](#verwendung)
-- [Einstellungen](#einstellungen)
-- [Quellen anbinden](#quellen-anbinden)
-- [Verhalten und Fehlerfälle](#verhalten-und-fehlerfälle)
-- [Datenablage](#datenablage)
-- [Architektur](#architektur)
-- [Entwicklung](#entwicklung)
-- [Bekannte Einschränkungen](#bekannte-einschränkungen)
-- [Lizenz](#lizenz)
+- [Overview](#overview)
+- [System requirements](#system-requirements)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [Usage](#usage)
+- [Settings](#settings)
+- [Connecting sources](#connecting-sources)
+- [Behaviour and error states](#behaviour-and-error-states)
+- [Data storage](#data-storage)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Release](#release)
+- [Known limitations](#known-limitations)
+- [License](#license)
 
-## Überblick
+## Overview
 
-**News of the World** ist ein kleines macOS-Utility, das News-Headlines aus mehreren Quellen zusammenführt und als ruhige Laufschrift direkt unter der Menüleiste anzeigt. Der Fokus liegt auf:
+**News of the World** is a small macOS utility that aggregates news headlines from multiple sources and surfaces them as a calm horizontal ticker directly under the menu bar. Design priorities:
 
-- **Leichtgewichtig** — keine Electron-Schicht, keine externen Frameworks, minimaler Fußabdruck
-- **Nativ** — Swift, SwiftUI + AppKit, Standard-macOS-Integration (Keychain, App-Sandbox, Appearance)
-- **Privat** — alle Daten bleiben lokal; keine Cloud-Sync, keine Analytics, keine fremden SDKs
-- **Erweiterbar** — neue Quelltypen lassen sich über ein Fetcher-Protokoll anschließen
+- **Lightweight** — no Electron layer, no third-party frameworks, minimal footprint.
+- **Native** — Swift, SwiftUI + AppKit, standard macOS integrations (Keychain, App Sandbox, appearance).
+- **Private** — everything stays local. No cloud sync, no analytics, no embedded SDKs.
+- **Extensible** — new source types are added by implementing a single `NewsFetcher` protocol and registering it in the resolver.
 
-## Systemvoraussetzungen
+## System requirements
 
-| Bereich | Anforderung |
+To **run** the app (the signed, notarised release):
+
+| Area | Requirement |
 | --- | --- |
-| Betriebssystem | macOS 26.4 (Tahoe) oder neuer |
+| Operating system | macOS 14 Sonoma or newer |
 | CPU | Apple Silicon (arm64) |
-| Bauumgebung | Xcode 26 oder neuer; Command-Line-Tools reichen **nicht** aus |
-| Swift | Swift 5 Sprachmodus; Xcode liefert den passenden Compiler mit |
-| Code-Signing | Lokales Ad-Hoc-Signing genügt, ein Apple-Entwicklerkonto ist nicht erforderlich |
-| Berechtigungen | App-Sandbox mit `com.apple.security.network.client` sowie Keychain-Zugriff; beides ist im Projekt vorkonfiguriert |
-| Netzwerk | Internetzugang zu den konfigurierten Feed- und API-Endpoints |
-| Speicherbedarf | < 10 MB für die App; Quellen/Einstellungen werden im Sandbox-Container abgelegt |
+| Permissions | App Sandbox with `com.apple.security.network.client` (shipped enabled) and Keychain access |
+| Network | Internet access to the configured feed and API endpoints |
+| Disk | < 10 MB for the app; sources and settings live inside the sandbox container |
 
-Falls `xcodebuild` aus dem Terminal das Tool nicht findet ("requires Xcode"), einmalig auf die volle Xcode-Installation umschalten:
+To **build from source**:
+
+| Area | Requirement |
+| --- | --- |
+| Xcode | Xcode 26 or newer (the project file uses `objectVersion = 77`, which older Xcode cannot open) |
+| Swift | Swift 5 language mode; the compiler ships with Xcode |
+| Signing (local dev) | Ad-hoc signing is sufficient; no Apple Developer account required |
+| Signing (release) | Apple Developer Program membership and a "Developer ID Application" certificate — see [Release](#release) |
+
+If `xcodebuild` from the terminal says "requires Xcode", point `xcode-select` at the full Xcode installation:
 
 ```sh
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
-## Schnellstart
+## Install
 
-1. Repository klonen, `newsoftheworld.xcodeproj` in Xcode öffnen, Scheme **newsoftheworld** wählen, ⌘R.
-2. Zeitungs-Icon in der Menüleiste anklicken → **Einstellungen…**.
-3. Tab **Quellen** → **Quelle hinzufügen**.
-4. Beispiel einfüllen: Name `tagesschau Wirtschaft`, Typ `JSON-API`, URL `https://www.tagesschau.de/api2u/news/?regions=1&ressort=wirtschaft`, Speichern.
-5. Menü → **Ticker anzeigen** — das Panel erscheint unter der Menüleiste und beginnt nach wenigen Sekunden zu laufen.
-
-## Installation
-
-### Homebrew (empfohlen)
+### Homebrew (recommended)
 
 ```sh
 brew tap paulkirchhoff/notw
 brew install --cask newsoftheworld
 ```
 
-Holt die signierte, notarisierte DMG direkt vom GitHub-Release, legt die App in `/Applications` und akzeptiert damit Gatekeeper ohne weitere Klicks.
+Downloads the signed, notarised DMG from the GitHub release, installs the app into `/Applications`, and is accepted by Gatekeeper without any additional dialogs.
 
-### Aus den Quellen bauen
+Upgrade to a newer release:
+
+```sh
+brew upgrade --cask newsoftheworld
+```
+
+### Build from source
 
 ```sh
 git clone https://github.com/PaulKirchhoff/newsoftheworld.git
@@ -75,9 +82,9 @@ cd newsoftheworld
 open newsoftheworld.xcodeproj
 ```
 
-In Xcode Scheme **newsoftheworld** wählen, ⌘R startet die App direkt. Der Build erzeugt ein reguläres `.app`-Bundle; es kann aus dem DerivedData-Ordner bei Bedarf auch herauskopiert werden.
+In Xcode: pick the **newsoftheworld** scheme, hit ⌘R. The debug build produces a regular `.app` bundle in DerivedData.
 
-Build ohne Xcode-IDE:
+From the command line:
 
 ```sh
 xcodebuild \
@@ -88,194 +95,210 @@ xcodebuild \
   build
 ```
 
-## Verwendung
+## Quickstart
 
-### Menüleiste
+Assuming the app is installed and launched:
 
-![Menüleisten-Menü](docs/screenshots/menu.png)
+1. Click the newspaper icon in the menu bar → **Settings…**.
+2. Switch to the **Sources** tab → **+ Add source**.
+3. Fill in a sample source: Name `tagesschau business`, Type `JSON API`, URL `https://www.tagesschau.de/api2u/news/?regions=1&ressort=wirtschaft`, Save.
+4. Menu bar icon → **Show ticker**. The panel slides in under the icon and starts scrolling after a few seconds.
 
-Nach dem Start erscheint ein Zeitungs-Icon in der Menüleiste. Klick öffnet ein Menü mit drei Einträgen:
+## Usage
 
-- **Ticker anzeigen / verbergen** — blendet das Laufschrift-Panel ein oder aus. Der Label-Text passt sich an den aktuellen Zustand an.
-- **Einstellungen…** (⌘,) — öffnet das Einstellungsfenster.
-- **Beenden** (⌘Q) — beendet die App.
+### Menu bar
 
-Die App hat absichtlich kein Dock-Icon und kein Hauptfenster. Sie lebt komplett in der Menüleiste.
+![Status-bar menu](docs/screenshots/menu.png)
 
-### Ticker-Panel
+After launch a newspaper icon appears in the menu bar. Clicking it opens a three-item menu:
 
-Das Panel positioniert sich automatisch direkt unter dem Menüleisten-Icon, schwebt über anderen Fenstern und verschwindet nicht beim Fokuswechsel. Es enthält ausschließlich die horizontale Laufschrift — keine Bedienelemente, um visuell ruhig zu bleiben.
+- **Show / Hide ticker** — toggles the scrolling panel. The label flips to reflect the current state.
+- **Settings…** (⌘,) — opens the settings window.
+- **Quit** (⌘Q) — quits the app.
 
-Darstellungsdetails:
+The app is intentionally dock-less and window-less; it lives entirely in the menu bar.
 
-- Kategorie der Quelle (falls vom Feed geliefert) als farbiger Präfix vor dem Titel
-- Trennzeichen zwischen Headlines
-- Einzeiliges Layout mit Fade-am-Rand-Animation; lange Titel werden sauber behandelt
+### Ticker panel
 
-## Einstellungen
+The panel anchors itself directly under the menu-bar icon, floats above other windows, and stays visible on focus changes. It contains nothing but the horizontal ticker — no controls — so it stays visually quiet.
 
-Das Einstellungsfenster hat zwei Tabs.
+Rendering details:
 
-### Allgemein
+- Category or kicker (when provided by the feed) rendered as a coloured prefix in front of the title.
+- Configurable separator string between headlines.
+- Single-line layout with edge clipping; long titles are handled cleanly.
 
-![Tab Allgemein](docs/screenshots/settings-general.png)
+## Settings
 
-- **Erscheinungsbild** — System / Hell / Dunkel, wirkt sofort auf Ticker-Panel und Einstellungsfenster.
-- **Ticker beim Start automatisch anzeigen** — öffnet das Panel direkt nach dem App-Start, ohne dass man erst klicken muss.
+The settings window has two tabs.
 
-### Quellen
+### General
 
-![Tab Quellen](docs/screenshots/settings-sources.png)
+![General tab](docs/screenshots/settings-general.png)
 
-Listet alle eingerichteten Quellen. Pro Zeile:
+- **Appearance** — System / Light / Dark; applies immediately to the ticker panel and the settings window.
+- **Ticker speed** — 20–200 pt/s slider; effects are live.
+- **Font size** — 11–22 pt slider.
+- **Width** — 320–1200 pt slider for the ticker panel.
+- **Show ticker on launch** — opens the panel automatically after app start.
+- **Launch at login** — toggled through `SMAppService`; macOS may require confirmation in System Settings the first time.
+- **Language** — system default plus explicit German, English, French and Spanish. Changes require an app relaunch; the UI offers to relaunch immediately.
 
-- Icon für aktiv (orange Antenne) oder deaktiviert (Pause-Symbol)
-- Name und URL
-- Typ-Badge (RSS / Atom / JSON-API)
-- Schlüsselsymbol, wenn ein API-Key hinterlegt ist
+### Sources
 
-Interaktion:
+![Sources tab](docs/screenshots/settings-sources.png)
 
-- **Doppelklick** auf eine Zeile öffnet den Bearbeiten-Dialog
-- **Rechtsklick** öffnet ein Kontextmenü mit *Bearbeiten* und *Entfernen*
-- **+ Quelle hinzufügen** öffnet das Quellenformular für eine neue Quelle
+Lists every configured source. Each row shows:
 
-### Quellenformular
+- Status icon: active (coloured antenna), disabled (pause symbol), error (red triangle).
+- Display name and endpoint URL.
+- Type badge (RSS / Atom / JSON API).
+- Key icon when an API key is stored for the source.
+- Relative timestamp and item count of the last successful fetch, or the error message when something failed.
 
-![Formular "Quelle anlegen"](docs/screenshots/source-form.png)
+Interaction:
 
-| Feld              | Beschreibung                                                                    |
-| ----------------- | ------------------------------------------------------------------------------- |
-| Name              | Frei wählbar, nur intern zur Organisation — wird nicht im Ticker angezeigt      |
-| Typ               | RSS, Atom oder JSON-API                                                         |
-| URL               | Feed- oder API-Endpoint; https empfohlen                                        |
-| Aktiv             | Aktive Quellen werden regelmäßig abgefragt, inaktive bleiben stumm              |
-| Aktualisierung    | Polling-Intervall, 1–60 Minuten, Standard 5 Minuten                             |
-| API-Key (optional) | Wird als `Authorization: Bearer <key>` gesendet und im Keychain abgelegt       |
+- **Double-click** a row to edit.
+- **Right-click** for the context menu (*Edit*, *Refresh now*, *Remove*).
+- **+ Add source** opens the source form for a new entry.
 
-Das API-Key-Feld bleibt beim Bearbeiten immer leer. Ist bereits ein Key hinterlegt, wird das angezeigt und kann entweder *entfernt* oder durch Eingabe eines neuen Werts überschrieben werden. Der gespeicherte Klartext-Key verlässt den Keychain niemals; er wird nur on-demand beim Fetch in den Request-Header eingesetzt.
+### Source form
 
-Nach **Speichern** startet der Scheduler die betroffene Quelle sofort neu — ohne App-Neustart.
+![Source form sheet](docs/screenshots/source-form.png)
 
-## Quellen anbinden
+| Field | Description |
+| --- | --- |
+| Name | Free-form label; used only in the settings UI, never shown in the ticker. |
+| Type | RSS, Atom or JSON API. |
+| URL | Feed or API endpoint. https strongly recommended. |
+| Enabled | Disabled sources are kept but not polled. |
+| Refresh every | Polling interval, 1–60 minutes, default 5. |
+| API key (optional) | Sent as `Authorization: Bearer <key>` and stored in the Keychain. |
+| Test | Runs a one-shot fetch against the entered values and reports success or the error inline, without saving. |
 
-### RSS / Atom
+When editing, the API key field is always empty. If a key is already stored this is indicated and can be either *Removed* or overwritten by typing a new value. The stored cleartext never leaves the Keychain; it is read on demand only when the fetcher builds the request.
 
-Standardkonforme XML-Feeds werden direkt verstanden. Aus jedem `<item>` (RSS) bzw. `<entry>` (Atom) werden folgende Felder extrahiert (erste Übereinstimmung gewinnt):
+Pressing **Save** persists the change and the scheduler re-polls the affected source immediately — no app restart required.
 
-| Zielfeld        | Akzeptierte Elemente                                                    |
-| --------------- | ----------------------------------------------------------------------- |
-| Titel           | `<title>`                                                               |
-| Link            | `<link>…</link>` (RSS), `<link rel="alternate" href="…"/>` (Atom)       |
-| Datum           | `<pubDate>`, `<published>`, `<updated>`, `<dc:date>`                    |
-| Zusammenfassung | `<description>`, `<summary>`, `<content>`                               |
-| Autor           | `<author>`, `<dc:creator>`                                              |
-| ID              | `<guid>`, `<id>`                                                        |
+## Connecting sources
 
-Unterstützte Datumsformate: ISO-8601 (mit oder ohne fraktionale Sekunden) und RFC-822 (typisches RSS-`pubDate`).
+### RSS and Atom
 
-### JSON-API
+Standards-compliant XML feeds work out of the box. For each `<item>` (RSS) or `<entry>` (Atom) the fetcher extracts (first match wins):
 
-Der JSON-Fetcher erkennt mehrere gängige Container-Formen automatisch.
+| Field | Accepted elements |
+| --- | --- |
+| Title | `<title>` |
+| Link | `<link>…</link>` (RSS), `<link rel="alternate" href="…"/>` (Atom) |
+| Date | `<pubDate>`, `<published>`, `<updated>`, `<dc:date>` |
+| Summary | `<description>`, `<summary>`, `<content>` |
+| Author | `<author>`, `<dc:creator>` |
+| ID | `<guid>`, `<id>` |
 
-Am Root akzeptiert werden:
+Supported date formats: ISO-8601 (with or without fractional seconds) and RFC-822 (the typical RSS `pubDate`).
 
-1. Ein Array von Items: `[ {…}, {…} ]`
-2. Ein Objekt mit einem der Schlüssel: `items`, `articles`, `news`, `results`, `data`, `entries`, `posts`
+### Generic JSON API
 
-Pro Item wird jeweils der erste passende Schlüssel verwendet:
+The JSON fetcher auto-detects several common container shapes.
 
-| Zielfeld        | Akzeptierte Schlüssel                                                              |
-| --------------- | ---------------------------------------------------------------------------------- |
-| Titel           | `title`, `headline`, `name`                                                        |
-| URL             | `url`, `link`, `canonical_url`, `permalink`, `detailsweb`, `shareURL`              |
-| Datum           | `publishedAt`, `published_at`, `pubDate`, `published`, `date`, `updated`           |
-| Zusammenfassung | `summary`, `description`, `excerpt`, `firstSentence`                               |
-| Autor           | `author`, `byline`, `creator`                                                      |
-| ID              | `id`, `guid`, `uuid`, `externalId`, `sophoraId`                                    |
-| Kategorie       | `topline`, `kicker`, `category`                                                    |
+Accepted at the root:
 
-Die Kategorie wird im Ticker als farbiger Präfix gerendert: *"Hannover Messe: Wie stark die deutsche Industrie KI bereits einsetzt"*.
+1. An array of items: `[ {…}, {…} ]`.
+2. An object with one of the keys `items`, `articles`, `news`, `results`, `data`, `entries`, `posts`.
 
-### Authentifizierung
+For each item, the first matching key is used:
 
-Aktuell ausschließlich **Bearer-Token** über den `Authorization`-Header. API-Keys als Query-Parameter, Basic-Auth oder individuelle Header sind noch nicht implementiert — siehe [Bekannte Einschränkungen](#bekannte-einschränkungen).
+| Target | Accepted keys |
+| --- | --- |
+| Title | `title`, `headline`, `name` |
+| URL | `url`, `link`, `canonical_url`, `permalink`, `detailsweb`, `shareURL` |
+| Date | `publishedAt`, `published_at`, `pubDate`, `published`, `date`, `updated` |
+| Summary | `summary`, `description`, `excerpt`, `firstSentence` |
+| Author | `author`, `byline`, `creator` |
+| ID | `id`, `guid`, `uuid`, `externalId`, `sophoraId` |
+| Category | `topline`, `kicker`, `category` |
 
-Ablauf:
+The category is rendered as a coloured prefix in the ticker, e.g. *"Hannover Messe: How deeply German industry has already adopted AI"*.
 
-1. Im Quellenformular API-Key eintragen, Speichern.
-2. Der Key landet im Keychain unter Service `de.paulkirchhoff.newsoftheworld`, Account `source.<UUID>`.
-3. Bei jedem Fetch für diese Quelle wird `Authorization: Bearer <key>` automatisch ergänzt.
+### Authentication
 
-### Beispiel: tagesschau-Wirtschaftsressort
+Currently only **Bearer tokens** via the `Authorization` header are supported. API keys as query parameters, Basic auth and custom headers are not implemented yet — see [Known limitations](#known-limitations).
 
-Eine reale JSON-API ohne API-Key.
+Flow:
 
-1. **+ Quelle hinzufügen**
-2. Felder:
-   - Name: `tagesschau Wirtschaft`
-   - Typ: `JSON-API`
+1. Enter the API key in the source form and save.
+2. The key is written to the Keychain under service `de.paulkirchhoff.newsoftheworld`, account `source.<UUID>`.
+3. Every fetch for that source adds `Authorization: Bearer <key>` to the request.
+
+### Example: tagesschau business ressort
+
+A real JSON API without an API key.
+
+1. **+ Add source**.
+2. Fields:
+   - Name: `tagesschau business`
+   - Type: `JSON API`
    - URL: `https://www.tagesschau.de/api2u/news/?regions=1&ressort=wirtschaft`
-   - Aktiv: ja
-   - Aktualisierung: 5 Min.
-   - API-Key: (leer lassen)
-3. **Speichern** → der Scheduler fragt die Quelle sofort ab.
-4. **Menü → Ticker anzeigen** — der Ticker zeigt Headlines mit `topline`-Präfix (z. B. *"Steigender DAX: Prinzip Hoffnung an der Börse"*).
+   - Enabled: yes
+   - Refresh: 5 min
+   - API key: (leave empty)
+3. **Save** → the scheduler polls the source immediately.
+4. **Menu → Show ticker** — headlines appear with the `topline` prefix, e.g. *"Rising DAX: Hope prevails on the stock market"*.
 
-Die Antwort ist ein Objekt mit dem Schlüssel `news`, das der Fetcher automatisch erkennt. Pro Item werden `externalId`, `title`, `date`, `firstSentence`, `shareURL` und `topline` gemappt — ohne zusätzliche Konfiguration.
+The response is an object keyed by `news`, which the fetcher recognises. Per item, `externalId`, `title`, `date`, `firstSentence`, `shareURL` and `topline` are mapped automatically — no extra configuration.
 
-## Verhalten und Fehlerfälle
+## Behaviour and error states
 
-| Situation                                           | Was der Ticker zeigt                                                |
-| --------------------------------------------------- | ------------------------------------------------------------------- |
-| Keine Quelle konfiguriert                           | "Keine Quellen konfiguriert"                                        |
-| Alle Quellen deaktiviert                            | wie oben                                                            |
-| Erste Ladeaktion läuft, noch keine Items            | "Lade Nachrichten …"                                                |
-| Mindestens eine Quelle liefert Items                | Laufschrift mit allen Items, sortiert nach Datum absteigend         |
-| Einzelne Quelle fehlerhaft, andere liefern          | Fehler wird still ignoriert; Laufschrift läuft weiter               |
-| Alle aktiven Quellen schlagen fehl                  | Fehlermeldung der ersten fehlschlagenden Quelle im Ticker           |
-| Quelle deaktiviert oder gelöscht                    | Ihre Items verschwinden sofort aus dem Ticker                       |
+| Situation | What the ticker shows |
+| --- | --- |
+| No sources configured | "No sources configured" |
+| All sources disabled | same |
+| First fetch in progress, no items yet | "Loading headlines…" |
+| At least one source delivered items | Running ticker with all items, sorted by date descending |
+| One source fails, others succeed | The per-source error is recorded but hidden; the ticker keeps scrolling |
+| All active sources fail | The error message of the first failing source is shown in the ticker |
+| Source disabled or deleted | Its items disappear from the ticker immediately |
 
-Refresh-Verhalten:
+Refresh behaviour:
 
-- Pro Quelle läuft ein eigener Scheduler-Task; die Intervalle sind unabhängig voneinander.
-- Beim Speichern einer Quelle (Anlegen, Bearbeiten, Löschen, Aktiv/Inaktiv) wird die betroffene Quelle sofort erneut gefetcht.
-- Internes Minimum liegt bei 30 Sekunden (hartes Guard gegen versehentlichen Spam), obwohl das UI 1 Minute als Mindestwert anbietet.
+- Each active source runs its own independent scheduler task.
+- Saving a source (add, edit, delete, toggle) re-fetches it immediately.
+- An internal minimum interval of 30 seconds guards against accidental spam, even though the UI offers 1 minute as the lowest selectable value.
 
-## Datenablage
+## Data storage
 
-| Was           | Wo                                                                                                                              |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Einstellungen | `UserDefaults`, Schlüssel `app_settings_v1`                                                                                     |
-| Quellen       | `~/Library/Containers/de.paulkirchhoff.newsoftheworld/Data/Library/Application Support/NewsOfTheWorld/sources.json`             |
-| API-Keys      | macOS-Keychain, Service `de.paulkirchhoff.newsoftheworld`, Account `source.<UUID>`                                              |
+| What | Where |
+| --- | --- |
+| Settings | `UserDefaults`, key `app_settings_v1` |
+| Sources | `~/Library/Containers/de.paulkirchhoff.newsoftheworld/Data/Library/Application Support/NewsOfTheWorld/sources.json` |
+| API keys | macOS Keychain, service `de.paulkirchhoff.newsoftheworld`, account `source.<UUID>` |
 
-Die App läuft in der App-Sandbox mit genau zwei Entitlements: `com.apple.security.app-sandbox` und `com.apple.security.network.client`. Keine Datei- oder Systemzugriffe außerhalb des eigenen Containers.
+The app runs sandboxed with exactly two entitlements: `com.apple.security.app-sandbox` and `com.apple.security.network.client`. No file or system access outside its own container.
 
-## Architektur
+## Architecture
 
-Vier Schichten mit klarer Trennung. Vollständige Spec in `newsoftheworld-starter/ai-context/architecture.md`, Kontext für Claude Code in `CLAUDE.md`.
+Four cleanly separated layers. Full spec in `newsoftheworld-starter/ai-context/architecture.md`; contextual notes for Claude Code in `CLAUDE.md`.
 
 ```
-Presentation    SwiftUI + AppKit — Status-Bar-Menu, Ticker-Panel (NSPanel),
-                Einstellungsfenster, ViewModels
-Application     Ports (NewsFetcher, Repositories, SecretStore),
-                Services (RefreshCoordinator, FetcherResolver)
-Domain          NewsItem, NewsSource, AppSettings, TickerState
+Presentation    SwiftUI + AppKit — status-bar menu, ticker panel (NSPanel),
+                settings window, view models
+Application     Ports (NewsFetcher, repositories, SecretStore),
+                services (RefreshCoordinator, FetcherResolver, SourceTester)
+Domain          NewsItem, NewsSource, AppSettings, TickerState, AppLanguage
 Infrastructure  URLSessionHTTPClient, XMLFeedFetcher, JSONFeedFetcher,
                 JSONNewsSourceRepository, UserDefaultsSettingsRepository,
-                KeychainSecretStore
+                KeychainSecretStore, SMAppServiceLaunchAtLoginAdapter
 ```
 
-Konsequenzen:
+Consequences:
 
-- Views rufen keine Netzwerk-, Datei- oder Keychain-APIs direkt auf — alles geht über die Ports im Application-Layer.
-- Domain-Modelle sind framework-frei, `Codable`, `Sendable`, `nonisolated` — damit Fetcher sie im Hintergrund erzeugen können.
-- Neue Quelltypen lassen sich durch einen weiteren `NewsFetcher` und einen Eintrag im `FetcherResolver` ergänzen.
+- Views never call networking, file or Keychain APIs directly — everything goes through ports in the Application layer.
+- Domain models are framework-free, `Codable`, `Sendable` and `nonisolated`, so fetchers can construct them off the main actor.
+- New source types are added by implementing `NewsFetcher` and registering the instance in `FetcherResolver`.
 
-## Entwicklung
+## Development
 
-Tests ausführen (Swift Testing + XCTest):
+Run the full test suite (Swift Testing + XCTest):
 
 ```sh
 xcodebuild \
@@ -285,44 +308,57 @@ xcodebuild \
   test
 ```
 
-Einzelnen Test ausführen:
+Run a single test:
 
 ```sh
 xcodebuild \
   -project newsoftheworld.xcodeproj \
   -scheme newsoftheworld \
   -destination 'platform=macOS' test \
-  -only-testing:newsoftheworldTests/newsoftheworldTests/example
+  -only-testing:newsoftheworldTests/JSONFeedFetcherTests/mapsTagesschauShapeWithToplineAndShareURL
 ```
 
-Das Xcode-Projekt verwendet **File System Synchronized Groups** — neue Dateien im Ordner `newsoftheworld/` werden automatisch in den Build aufgenommen, ohne dass `project.pbxproj` manuell editiert werden muss.
+The Xcode project uses **file-system synchronised groups** — new files under `newsoftheworld/` are picked up by the build automatically without editing `project.pbxproj`.
 
-## Bekannte Einschränkungen
+## Release
 
-- JSON-Mapping ist aktuell ein fixer Satz von Schlüsselkandidaten — noch nicht pro Quelle konfigurierbar.
-- Authentifizierung nur als Bearer-Token; kein Basic-Auth, keine Query-Parameter-Keys, keine Custom-Header.
-- Refresh-Verhalten speichert Items nur im Arbeitsspeicher; nach einem Neustart wird neu geladen.
-- Die Ticker-Geschwindigkeit ist aktuell nicht in der UI einstellbar (Feld existiert im Modell und wird vorbereitet).
-- Kein Launch-at-Login über Systemeinstellungen (separat geplant).
-- Noch keine Unit-Tests für die Feed-Parser.
+Releases are produced by a CI workflow in `.github/workflows/release.yml`. Pushing a `v*` tag triggers:
 
-## Release bauen
+1. `xcodebuild archive` with Developer ID signing, hardened runtime and App Sandbox.
+2. `xcodebuild -exportArchive` using `ExportOptions.plist` (developer-id / manual signing).
+3. Notarisation of the `.app` via `xcrun notarytool --wait`, followed by stapling.
+4. A signed, notarised, stapled DMG built with `create-dmg`, plus a second notarisation round for the DMG itself.
+5. A GitHub Release created with the tag name, containing the DMG and its SHA-256 file as assets.
+6. An automatic bump of the Homebrew cask in `PaulKirchhoff/homebrew-notw` with the new version and SHA, committed as `github-actions[bot]`.
 
-Voraussetzungen (einmalig):
-
-- Apple Developer Program-Mitgliedschaft, Team-ID im Projekt als `DEVELOPMENT_TEAM`
-- "Developer ID Application"-Zertifikat im Keychain
-- App Store Connect API-Key als Notary-Credential unter dem Profil `NEWS_OF_THE_WORLD_NOTARY` abgelegt (`xcrun notarytool store-credentials`)
-- `create-dmg` (`brew install create-dmg`)
-
-Dann:
+Thus a full release is:
 
 ```sh
-scripts/release.sh 0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-Das Skript archiviert (Release-Konfiguration, Hardened Runtime, Manual-Signing mit Developer-ID), exportiert laut `ExportOptions.plist`, signiert, reicht die .app-Archive und die DMG nacheinander bei Apple zur Notarisierung ein, stapelt die Tickets und berechnet die SHA-256 für die Homebrew-Cask-Formel. Output landet unter `build/release/`.
+Required GitHub repository secrets:
 
-## Lizenz
+| Secret | Content |
+| --- | --- |
+| `DEVELOPER_ID_CERT_P12` | Base64 of the exported `Developer ID Application` certificate (`.p12`) |
+| `DEVELOPER_ID_CERT_PASSWORD` | Password used to export the `.p12` |
+| `KEYCHAIN_PASSWORD` | Any strong password used for the runner's temporary keychain |
+| `APPLE_API_KEY_P8` | Contents of the App Store Connect `AuthKey_<ID>.p8` file |
+| `APPLE_API_KEY_ID` | 10-character key identifier from App Store Connect |
+| `APPLE_API_ISSUER_ID` | Issuer UUID from App Store Connect |
+| `TAP_REPO_TOKEN` | Fine-grained PAT with `Contents: Read and write` on `PaulKirchhoff/homebrew-notw` |
 
-MIT — siehe [LICENSE](LICENSE).
+For local release builds, `scripts/release.sh <version>` reproduces the same pipeline using a local Keychain profile `NEWS_OF_THE_WORLD_NOTARY` instead of CI secrets. The same `workflow_dispatch` entry point lets you dry-run the CI path from the Actions UI without creating a public release.
+
+## Known limitations
+
+- The JSON mapping uses a fixed set of candidate keys and is not yet per-source configurable.
+- Authentication is Bearer-token only; no Basic auth, query-parameter keys or custom headers.
+- Headlines are cached only in memory; a restart triggers a fresh fetch.
+- No in-app auto-updates (`Sparkle` or similar) — users pick up new versions via `brew upgrade`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
