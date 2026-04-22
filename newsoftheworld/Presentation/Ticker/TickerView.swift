@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct TickerView: View {
@@ -60,8 +61,24 @@ struct TickerView: View {
                 }
                 headline(for: item)
                     .lineLimit(1)
+                    .contentShape(Rectangle())
+                    .onTapGesture { openURL(for: item) }
+                    .onHover { hovering in
+                        if item.url != nil {
+                            if hovering {
+                                NSCursor.pointingHand.push()
+                            } else {
+                                NSCursor.pop()
+                            }
+                        }
+                    }
             }
         }
+    }
+
+    private func openURL(for item: NewsItem) {
+        guard let url = item.url else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private var widthReader: some View {
