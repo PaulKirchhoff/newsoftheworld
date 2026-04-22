@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-04-22
+
+### Added
+- Ticker headlines are clickable — a tap opens the item's URL in the
+  default browser and the cursor switches to a pointing hand while
+  hovering a linked headline.
+- Inline enable/disable switch on each row of the sources list, so a
+  source can be paused without opening the edit dialog.
+
+### Changed
+- Ticker panel width is now stored as a percentage of the screen
+  width (0–100 %, default 35 %) instead of an absolute point value,
+  so the panel scales sensibly across different displays. Existing
+  saved widths are migrated automatically on first launch.
+- Hovering the cursor over the ticker freezes the scroll position;
+  the animation resumes from the same spot on leave.
+- Size changes from the settings sliders no longer snap the panel
+  back under the menu-bar icon — only the initial show anchors to
+  the icon, subsequent resizes preserve the visual top-left corner.
+- README rewritten in English with accurate runtime vs.
+  build-from-source requirements and a description of the
+  tag-triggered CI release flow.
+
+### Fixed
+- First show of the ticker at launch no longer renders off-screen:
+  the panel now waits until the status-bar anchor window has a real
+  frame before positioning, and falls back to screen-center if the
+  computed origin would lie outside every visible screen.
+- String-catalog interpolation variants (refresh interval, item
+  count, "updated ago", test-success message) were falling back to
+  the raw key at runtime because the auto-generated format-specifier
+  keys were left untranslated; all four now carry the correct
+  de/en/fr/es translations.
+
 ## [0.1.2] — 2026-04-22
 
 ### Added
@@ -66,7 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Requirements
 - macOS 14 Sonoma or newer, Apple Silicon.
 
-[Unreleased]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/PaulKirchhoff/newsoftheworld/releases/tag/v0.1.0
