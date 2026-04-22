@@ -48,18 +48,20 @@ final class TickerPanelController {
         desiredSize = size
         guard let panel else { return }
         applyDesiredSize(to: panel)
-        if panel.isVisible {
-            position(panel: panel)
-        }
     }
 
     static func panelHeight(forFontSize fontSize: Double) -> CGFloat {
         max(22, ceil(fontSize * 1.5) + 6)
     }
 
+    /// Resizes the panel while keeping its current top-left corner pinned.
+    /// AppKit measures window frames from the bottom-left, so to preserve
+    /// the visual top we anchor `frame.maxY` instead of `frame.origin.y`.
     private func applyDesiredSize(to panel: NSPanel) {
         var frame = panel.frame
+        let oldMaxY = frame.maxY
         frame.size = desiredSize
+        frame.origin.y = oldMaxY - frame.size.height
         panel.setFrame(frame, display: true)
     }
 
