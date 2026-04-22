@@ -37,11 +37,56 @@ final class TickerPanelController {
     }
 
     func show() {
+        if panel == nil {
+            // First show after launch: the NSStatusItem's button window
+            // can take several runloop ticks to be placed in the menu
+            // bar (especially under the Xcode debugger). Anchoring to an
+            // empty frame would land the panel off-screen, so wait until
+            // the button reports a real frame.
+            awaitAnchorPlacement { [weak self] in
+                self?.performShow()
+            }
+        } else {
+            performShow()
+        }
+    }
+
+    private func performShow() {
         let panel = panel ?? makePanel()
         self.panel = panel
         applyDesiredSize(to: panel)
         position(panel: panel)
         panel.orderFrontRegardless()
+    }
+
+    /// Polls the anchor's window frame until it reports a realistic
+    /// menu-bar placement (non-zero size AND origin near the top of some
+    /// screen), up to ~1 second. Falls through regardless on timeout so
+    /// the user still sees something rather than a ghost panel.
+    private func awaitAnchorPlacement(attempt: Int = 0, completion: @escaping () -> Void) {
+        let maxAttempts = 60
+        let frame = anchor()?.window?.frame ?? .zero
+        if Self.isAnchorPlaced(frame) {
+            completion()
+            return
+        }
+        if attempt >= maxAttempts {
+            completion()
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.016) { [weak self] in
+            self?.awaitAnchorPlacement(attempt: attempt + 1, completion: completion)
+        }
+    }
+
+    /// A placed status-bar item sits near the top of some screen. Before
+    /// macOS finishes placing it the frame is empty or parked at origin
+    /// .zero with garbage size — distinguishable from the real thing.
+    private static func isAnchorPlaced(_ frame: NSRect) -> Bool {
+        guard frame.size.width > 0, frame.size.height > 0 else { return false }
+        return NSScreen.screens.contains { screen in
+            frame.minY >= screen.frame.maxY - 60
+        }
     }
 
     func updateGeometry(size: NSSize) {
@@ -88,13 +133,25 @@ final class TickerPanelController {
     }
 
     private func position(panel: NSPanel) {
-        guard let buttonWindow = anchor()?.window else {
+        guard
+            let buttonWindow = anchor()?.window,
+            Self.isAnchorPlaced(buttonWindow.frame)
+        else {
             panel.center()
             return
         }
         let buttonFrame = buttonWindow.frame
-        let x = buttonFrame.midX - panel.frame.width / 2
-        let y = buttonFrame.minY - panel.frame.height - 4
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        let origin = NSPoint(
+            x: buttonFrame.midX - panel.frame.width / 2,
+            y: buttonFrame.minY - panel.frame.height - 4
+        )
+        let target = NSRect(origin: origin, size: panel.frame.size)
+        // Guard against multi-screen edge cases: if the resulting frame
+        // is not on any visible screen, centre instead of disappearing.
+        if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(target) }) {
+            panel.setFrameOrigin(origin)
+        } else {
+            panel.center()
+        }
     }
 }
