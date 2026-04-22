@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-04-22
+
+### Added
+- Release workflow now auto-bumps the cask in the
+  `PaulKirchhoff/homebrew-notw` tap after a successful release, so a
+  `git push --tags` is the only manual action required for a new
+  version to reach Homebrew users.
+- The release workflow accepts a `workflow_dispatch` trigger for
+  dry-runs: manual invocations produce a downloadable DMG artifact
+  without creating a public GitHub release, useful for verifying the
+  signing + notarisation chain without consuming a version number.
+
+### Changed
+- CI runner upgraded from `macos-14` to `macos-latest` with an
+  explicit `latest-stable` Xcode selection, so the pipeline can open
+  projects saved by Xcode 26 (pbxproj `objectVersion = 77`).
+
 ## [0.1.1] — 2026-04-21
 
 ### Changed
@@ -49,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Requirements
 - macOS 14 Sonoma or newer, Apple Silicon.
 
-[Unreleased]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/PaulKirchhoff/newsoftheworld/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/PaulKirchhoff/newsoftheworld/releases/tag/v0.1.0
