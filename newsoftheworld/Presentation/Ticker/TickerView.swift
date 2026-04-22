@@ -11,6 +11,7 @@ struct TickerView: View {
     @State private var viewWidth: CGFloat = 0
     @State private var anchorDate: Date = .distantPast
     @State private var anchorOffset: CGFloat = 0
+    @State private var pausedOffset: CGFloat?
 
     var body: some View {
         GeometryReader { geo in
@@ -37,6 +38,13 @@ struct TickerView: View {
             }
         }
         .padding(.horizontal, 12)
+        .onHover { hovering in
+            if hovering {
+                pauseAnimation()
+            } else {
+                resumeAnimation()
+            }
+        }
         .onPreferenceChange(TickerContentWidthKey.self) { newWidth in
             guard newWidth != contentWidth else { return }
             rebaseForSizeChange(oldViewWidth: viewWidth, oldContentWidth: contentWidth)
@@ -48,7 +56,20 @@ struct TickerView: View {
         .onChange(of: items) { _, _ in
             anchorDate = Date()
             anchorOffset = viewWidth
+            pausedOffset = nil
         }
+    }
+
+    private func pauseAnimation() {
+        guard pausedOffset == nil else { return }
+        pausedOffset = visualOffset(now: Date(), viewWidth: viewWidth)
+    }
+
+    private func resumeAnimation() {
+        guard let snapshot = pausedOffset else { return }
+        anchorDate = Date()
+        anchorOffset = snapshot
+        pausedOffset = nil
     }
 
     private var tickerRow: some View {
@@ -125,6 +146,9 @@ struct TickerView: View {
     }
 
     private func visualOffset(now: Date, viewWidth: CGFloat) -> CGFloat {
+        if let snapshot = pausedOffset {
+            return snapshot
+        }
         guard contentWidth > 0, viewWidth > 0, speed > 0, anchorDate != .distantPast else {
             return anchorOffset
         }
