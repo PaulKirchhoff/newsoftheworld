@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version string (e.g. 0.1.2). Without this, picks up MARKETING_VERSION from the project."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -56,11 +62,22 @@ jobs:
           chmod 600 "$KEY_PATH"
           echo "path=$KEY_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Extract version from tag
+      - name: Resolve release version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          if [[ -z "$VERSION" ]]; then
+            VERSION=$(xcodebuild -project newsoftheworld.xcodeproj -scheme newsoftheworld \
+              -configuration Release -showBuildSettings 2>/dev/null \
+              | awk -F ' = ' '/^ *MARKETING_VERSION/ {gsub(/ /, "", $2); print $2; exit}')
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
 
       - name: Build, sign and notarise
         env:
@@ -70,6 +87,7 @@ jobs:
         run: scripts/release.sh "${{ steps.version.outputs.version }}"
 
       - name: Create / update GitHub Release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -78,6 +96,16 @@ jobs:
           files: |
             build/release/NewsOfTheWorld-${{ steps.version.outputs.version }}.dmg
             build/release/NewsOfTheWorld-${{ steps.version.outputs.version }}.dmg.sha256
+
+      - name: Upload DMG as workflow artifact (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NewsOfTheWorld-${{ steps.version.outputs.version }}
+          path: |
+            build/release/NewsOfTheWorld-${{ steps.version.outputs.version }}.dmg
+            build/release/NewsOfTheWorld-${{ steps.version.outputs.version }}.dmg.sha256
+          retention-days: 7
 
       - name: Clean up secrets from disk
         if: always()
