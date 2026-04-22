@@ -114,6 +114,41 @@ jobs:
             build/release/NewsOfTheWorld-${{ steps.version.outputs.version }}.dmg.sha256
           retention-days: 7
 
+      - name: Bump Homebrew tap cask
+        if: github.event_name == 'push'
+        env:
+          TAP_REPO_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${TAP_REPO_TOKEN:-}" ]]; then
+            echo "::warning title=Tap bump skipped::TAP_REPO_TOKEN secret is not set; cask in PaulKirchhoff/homebrew-notw was NOT updated. Add a fine-grained PAT with write access to that repo and re-run."
+            exit 0
+          fi
+
+          SHA=$(awk '{print $1}' "build/release/NewsOfTheWorld-$VERSION.dmg.sha256")
+          echo "Bumping tap cask to version=$VERSION sha256=$SHA"
+
+          TAP_DIR="$RUNNER_TEMP/homebrew-notw"
+          git clone "https://x-access-token:$TAP_REPO_TOKEN@github.com/PaulKirchhoff/homebrew-notw.git" "$TAP_DIR"
+
+          CASK="$TAP_DIR/Casks/newsoftheworld.rb"
+          sed -i.bak -E "s/^(  version \")[^\"]+\"/\\1${VERSION}\"/" "$CASK"
+          sed -i.bak -E "s/^(  sha256 \")[^\"]+\"/\\1${SHA}\"/"     "$CASK"
+          rm "$CASK.bak"
+
+          cd "$TAP_DIR"
+          if git diff --quiet; then
+            echo "Cask already at v$VERSION; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/newsoftheworld.rb
+          git commit -m "Bump newsoftheworld to v$VERSION"
+          git push origin main
+
       - name: Clean up secrets from disk
         if: always()
         run: |
