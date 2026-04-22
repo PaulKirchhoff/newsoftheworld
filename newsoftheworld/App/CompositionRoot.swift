@@ -43,8 +43,13 @@ final class CompositionRoot {
         appearance.apply(initialSettings.appearance)
 
         let initialPanelSize = NSSize(
-            width: initialSettings.tickerPanelWidth,
-            height: TickerPanelController.panelHeight(forFontSize: initialSettings.tickerFontSize)
+            width: TickerPanelController.panelWidth(
+                forPercent: initialSettings.tickerPanelWidthPercent,
+                in: NSScreen.main
+            ),
+            height: TickerPanelController.panelHeight(
+                forFontSize: initialSettings.tickerFontSize
+            )
         )
         let panelController = TickerPanelController(
             viewModel: tickerVM,
@@ -72,10 +77,8 @@ final class CompositionRoot {
                 tickerVM.fontSize = settings.tickerFontSize
                 appearance.apply(settings.appearance)
                 panelController.updateGeometry(
-                    size: NSSize(
-                        width: settings.tickerPanelWidth,
-                        height: TickerPanelController.panelHeight(forFontSize: settings.tickerFontSize)
-                    )
+                    fontSize: settings.tickerFontSize,
+                    widthPercent: settings.tickerPanelWidthPercent
                 )
             },
             onSourcesChange: { [refreshCoordinator] in

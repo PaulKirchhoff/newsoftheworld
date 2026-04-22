@@ -89,14 +89,28 @@ final class TickerPanelController {
         }
     }
 
-    func updateGeometry(size: NSSize) {
-        desiredSize = size
+    func updateGeometry(fontSize: Double, widthPercent: Double) {
+        let screen = panel?.screen ?? NSScreen.main
+        desiredSize = NSSize(
+            width: Self.panelWidth(forPercent: widthPercent, in: screen),
+            height: Self.panelHeight(forFontSize: fontSize)
+        )
         guard let panel else { return }
         applyDesiredSize(to: panel)
     }
 
     static func panelHeight(forFontSize fontSize: Double) -> CGFloat {
         max(22, ceil(fontSize * 1.5) + 6)
+    }
+
+    /// Converts a "fraction-of-screen" percentage (0…100) into an
+    /// absolute pixel width. Falls back to the main screen if the panel
+    /// hasn't been placed on a screen yet. A small floor keeps AppKit
+    /// from having to render a zero-width window.
+    static func panelWidth(forPercent percent: Double, in screen: NSScreen?) -> CGFloat {
+        let screenWidth = (screen ?? NSScreen.main)?.frame.width ?? 1440
+        let clamped = min(max(percent, 0), 100)
+        return max(80, screenWidth * clamped / 100)
     }
 
     /// Resizes the panel while keeping its current top-left corner pinned.

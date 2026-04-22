@@ -78,14 +78,14 @@ private struct GeneralSettingsView: View {
                     HStack {
                         Text("ticker.width")
                         Spacer()
-                        Text(verbatim: "\(Int(viewModel.appSettings.tickerPanelWidth)) pt")
+                        Text(verbatim: "\(Int(viewModel.appSettings.tickerPanelWidthPercent)) %")
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
                     Slider(
                         value: tickerPanelWidthBinding,
-                        in: 320...1200,
-                        step: 20
+                        in: 0...100,
+                        step: 5
                     ) {
                         Text("ticker.width")
                     } minimumValueLabel: {
@@ -189,9 +189,9 @@ private struct GeneralSettingsView: View {
 
     private var tickerPanelWidthBinding: Binding<Double> {
         Binding(
-            get: { viewModel.appSettings.tickerPanelWidth },
+            get: { viewModel.appSettings.tickerPanelWidthPercent },
             set: {
-                viewModel.appSettings.tickerPanelWidth = $0
+                viewModel.appSettings.tickerPanelWidthPercent = $0
                 viewModel.persistSettings()
             }
         )
