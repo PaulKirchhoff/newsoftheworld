@@ -161,6 +161,13 @@ final class SettingsViewModel {
         persistSources()
     }
 
+    func setSourceEnabled(id: UUID, enabled: Bool) {
+        guard let index = sources.firstIndex(where: { $0.id == id }) else { return }
+        guard sources[index].isEnabled != enabled else { return }
+        sources[index].isEnabled = enabled
+        persistSources()
+    }
+
     func deleteSource(id: UUID) {
         try? secretStore.removeSecret(for: keychainReference(for: id))
         sources.removeAll { $0.id == id }

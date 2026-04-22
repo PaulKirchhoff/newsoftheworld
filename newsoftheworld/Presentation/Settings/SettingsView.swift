@@ -305,7 +305,10 @@ private struct SourcesSettingsView: View {
             ForEach(viewModel.sources) { source in
                 SourceRow(
                     source: source,
-                    status: viewModel.statusStore.statuses[source.id]
+                    status: viewModel.statusStore.statuses[source.id],
+                    onEnabledToggle: { enabled in
+                        viewModel.setSourceEnabled(id: source.id, enabled: enabled)
+                    }
                 )
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { editing = .edit(source) }
@@ -341,6 +344,7 @@ private struct SourcesSettingsView: View {
 private struct SourceRow: View {
     let source: NewsSource
     let status: SourceFetchStatus?
+    let onEnabledToggle: (Bool) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -359,6 +363,16 @@ private struct SourceRow: View {
             }
             Spacer()
             badges
+            Toggle(
+                "sourceForm.enabled",
+                isOn: Binding(
+                    get: { source.isEnabled },
+                    set: { onEnabledToggle($0) }
+                )
+            )
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
         }
         .padding(.vertical, 4)
     }
